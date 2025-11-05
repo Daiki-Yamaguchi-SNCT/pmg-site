@@ -1,0 +1,95 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="my-style.css">
+        <script src="scripts/main.js" defer></script>
+        <title>
+            KOSEN Taro's Page
+        </title>
+        
+    </head>
+    
+<body>
+    <h1>高専太郎のページ</h1>
+    <h2>目次</h2>
+        <ul>
+            <li><a href=#自己紹介>自己紹介</a></li>
+            <li><a href=#学校生活>学校生活について</a></li>
+            <li><a href=#スポット>地元のおすすめスポットランキング</a></li>
+            <li><a href=#リンク>リンク</a></li>
+        </ul>
+    <h2 id="自己紹介">自己紹介</h2>
+        <p class="hello">こんにちは。高専太郎といいます。鈴鹿高専電子情報工学科の1年生です。 Webアプリ開発に興味があり、放課後はReactの勉強をしています。</p>
+        <p class="ppap">学校生活では、特に好きな授業は基礎数学Aです。理由は数学が好きだからです。</p>
+    <h2 id="学校生活">学校生活について</h2>
+        <ul>
+            <li>授業</li>
+            <li>部活</li>
+            <li>行事</li>
+                鈴鹿高専には楽しい行事がたくさんあります！
+                <ul>
+                    <li>高専祭</li>
+                    <li>研修旅行</li>
+                    <li>体育祭</li>
+                </ul>
+        </ul>
+        <hr>
+    <h2 id="スポット", class="backblue">地元のおすすめスポットランキング</h2>
+        <ol>
+            <li>伊勢神宮</li>
+                <figure>
+                <img src="images/sample1.jpg" height="300" width="400" alt="伊勢神宮の奉納舞台">
+                <figcaption>
+                    私の大好きな奉納舞台です！（お宮じゃなくてすみません汗）<br>
+                    外宮に行ったときは必ず見に行きます^^
+                </figcaption>       
+                </figure>
+            <li>朝熊山望台</li>
+                <figure>
+                    <video controls muted width="400" height="300" 
+                    controlslist="nodownload"
+                    onconrextmenu="return false;">
+                        <source src="videos/sample.mp4" type="video/mp4">
+                            <p>ご使用のブラウザではサポートされていません</p>
+                </video>
+                </figure>
+            <li>夫婦岩</li>
+        </ol>
+    <h2 id="リンク">リンク</h2>    
+        <a href="https://www.suzuka-ct.ac.jp/">鈴鹿高専</a><hr>
+    <h2 class="red">アンケートにご協力ください</h2>
+        <form>
+            <h3>このページは分かりやすかったですか？</h3>
+            <label><input type="radio" name="設問１">分かりやすい</label>
+            <label><input type="radio" name="設問１">少し分かりやすい</label>
+            <label><input type="radio" name="設問１">普通</label>
+            <label><input type="radio" name="設問１">少し分かりにくい</label>
+            <label><input type="radio" name="設問１">分かりにくい</label>
+            <h3>面白かった内容を選んでください。</h3>
+            <label><input type="checkbox" name="設問２">自己紹介</label>
+            <label><input type="checkbox" name="設問２">学校生活について</label>
+            <label><input type="checkbox" name="設問２">地元のおすすめスポットランキング</label>
+            <p>
+                <h3>なにかご意見・感想があれば記述してください。</h3><br>
+                <textarea id="msg" name="設問３" rows="4"></textarea><br>
+                よろしければ送信をクリックして下さい。
+            </p>
+
+            <button type="button" onclick="showMessage()">送信</button>
+        </form>
+    
+    <h2>運勢</h2>
+        <button type="button" onclick="omikuji()">おみくじ</button>
+        <p>実行結果は・・・</p>
+        <p id="result">ボタンを押しておみくじを引いてみよう</p>
+        <p>現在のおみくじ実行回数は・・・</p>
+        <p id="count">0回です</p>
+
+
+        <!-- この中身に何を書いても Web ページに影響はない -->
+
+
+</body>
+</html>
