@@ -2,6 +2,7 @@
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <link rel="icon" href="file:///C:/Users/ponta/Downloads/icon.ico">
   <link rel="stylesheet" href="style.css">
+  <script src="scripts/main.js" defer></script>
 <title>～早寝早起き～ | ゆこりん教ホームページ</title>
 </head>
 
@@ -9,16 +10,3 @@
   <tableg src="\yukorin.files\family_bed_kawanoji.png" height="300" width="400" alt="川の字で寝ている家族"></tr><tr><b id="greeting">今日も夜8時30分にお待ちしておりますよ^^♪</b></tr>
   </table>
 </body>
-
-<script>
-    const hour = new Date().getHours();
-    const greeting = document.getElementById("greeting");
-
-    if (hour < 6) {
-      greeting.textContent = "早起きですね！健康的で素晴らしいです🌅";
-    } else if (hour < 22) {
-      greeting.textContent = "今日も夜8時30分にお待ちしておりますよ^^♪";
-    } else {
-      greeting.textContent = "もう夜更かしの時間ですね…おやすみなさい🌙";
-    }
- </script>
