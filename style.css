@@ -1,2 +1,43 @@
 @charset "utf-8";
 
+body{
+    text-align: center;
+}
+
+table{
+    background-color:rgb(109, 109, 219);
+    color:white;
+    font-size: 20px;
+    font-family: "HG創英角ﾎﾟｯﾌﾟ体";
+    width:1425px;
+}
+
+.radius-table{
+    border-radius: 10px;
+    border-spacing: 0;
+    border: none;
+    border-left: 1px solid #999;
+    border-top: 1px solid #999;
+}
+.radius-table tr>*{
+    padding: 5px 10px;
+    border: none;
+    border-right: 1px solid #999;
+    border-bottom: 1px solid #999;
+}
+.radius-table tr:first-child>*:first-child{
+    border-radius: 10px 0 0 0;
+}
+.radius-table tr:first-child>*:last-child{
+    border-radius: 0 10px 0 0;
+}
+.radius-table tr:last-child>*:first-child{
+    border-radius: 0 0 0 10px;
+}
+.radius-table tr:last-child>*:last-child{
+    border-radius: 0 0 10px 0;
+}
+
+.big{
+    font-size:40px;
+}
