@@ -8,3 +8,42 @@
     } else {
       greeting.textContent = "もう夜更かしの時間ですね…おやすみなさい🌙";
     }
+
+    let currentSlideIndex = 0;
+    const sliderSlides = document.querySelectorAll('.slider-slide');
+    const sliderDots = document.querySelectorAll('.slider-dot');
+
+    function showSliderSlide(index) {
+        // インデックスが範囲外の場合の処理
+        if (index >= sliderSlides.length) {
+            currentSlideIndex = 0;
+        } else if (index < 0) {
+            currentSlideIndex = sliderSlides.length - 1;
+        } else {
+            currentSlideIndex = index;
+        }
+
+        // スライド位置の変更
+        document.querySelector('.slider-slides').style.transform = `translateX(-${currentSlideIndex * 100}%)`;
+
+        // インジケーターの更新
+        sliderDots.forEach((dot, i) => {
+            dot.classList.toggle('slider-active', i === currentSlideIndex);
+        });
+    }
+
+    // 自動スライド機能
+    function startSliderAutoSlide() {
+        setInterval(() => {
+            showSliderSlide(currentSlideIndex + 1);
+        }, 3000); // 3秒ごとにスライド
+    }
+
+    // インジケータークリックイベント
+    sliderDots.forEach((dot, i) => {
+        dot.addEventListener('click', () => showSliderSlide(i));
+    });
+
+    // 初期表示
+    showSliderSlide(currentSlideIndex);
+    startSliderAutoSlide();
