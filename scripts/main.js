@@ -70,6 +70,6 @@ function activateSecret() {
   // “ザザッ…”って感じのわずかな遅延を入れる
   setTimeout(() => {
     // 例：隠しページ移動（好きに変えてOK）
-    window.location.href = "/secret.html";
+    window.location.href = "paraQ.html";
   }, 700);
 }
