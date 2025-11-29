@@ -47,3 +47,29 @@
     // 初期表示
     showSliderSlide(currentSlideIndex);
     startSliderAutoSlide();
+
+const secret = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
+let pos = 0;
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === secret[pos]) {
+    pos++;
+    if (pos === secret.length) {
+      activateSecret();
+      pos = 0;
+    }
+  } else {
+    pos = 0;
+  }
+});
+
+function activateSecret() {
+  const screen = document.getElementById("blackout");
+  screen.classList.add("active");
+
+  // “ザザッ…”って感じのわずかな遅延を入れる
+  setTimeout(() => {
+    // 例：隠しページ移動（好きに変えてOK）
+    window.location.href = "/secret.html";
+  }, 700);
+}
