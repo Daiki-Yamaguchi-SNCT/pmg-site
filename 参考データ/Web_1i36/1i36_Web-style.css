@@ -1,0 +1,49 @@
+@charset "utf-8";
+
+body{
+    cursor: url('images/kao.png'), auto;
+    background-color: rgb(219, 191, 143);
+    color: black;
+    text-align: center;
+}
+
+.blue{
+    color: green;
+}
+
+.red{
+    color: red;
+}
+
+.green{
+    color: rgb(41, 185, 41);
+}
+
+.lightblue{
+    color: rgb(55, 177, 218);
+}
+
+.pink{
+    color: rgb(255, 28, 66);
+}
+
+.purple{
+    color: purple;
+}
+
+.yellow{
+    color: yellow;
+}
+
+.redbig{
+    color: red;
+    font-size: 1.5em;
+}
+
+label:hover{
+    color: yellow;
+}
+
+#show-image {
+    display: none;
+}

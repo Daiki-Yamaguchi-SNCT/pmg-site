@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="1i36_Web-style.css">
+        <script src="scripts/1i36_Web-main.js" defer></script>
+        <title>
+            anke-to
+        </title>
+
+    </head>
+    
+<body>
+    <form>
+        <h1>アンケート</h1>
+            <h2>１．イヌは好きですか。</h2>
+            <label><input type="radio" name="設問１">好きだ</label>
+            <label id="inuzuki"><input type="radio" name="設問１">嫌いだ</label>
+            <h2>２．イヌについてイヌの可愛さについて触れながら、50文字以上100文字以下で記述しなさい。</h2><br>
+            <textarea id="msg" name="設問２" rows="8"></textarea><br>
+            よろしければ送信をクリックして下さい。
+        </p>
+
+        <button type="submit" onclick="showMessage()">送信</button>
+    </form>
+    <hr>
+    <a href="index.html">TOPページに戻る</a>
+    
+</body>
