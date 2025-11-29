@@ -48,22 +48,28 @@
     showSliderSlide(currentSlideIndex);
     startSliderAutoSlide();
 
-    const secret = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
+const secret = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
 let pos = 0;
 
 document.addEventListener("keydown", (e) => {
   if (e.key === secret[pos]) {
     pos++;
     if (pos === secret.length) {
-      triggerSecret(); // 裏コマンド発動
+      activateSecret();
       pos = 0;
     }
   } else {
-    pos = 0; // 途中でミスったらリセット
+    pos = 0;
   }
 });
 
-function triggerSecret() {
-  alert("裏コマンド発動！隠しページへ移動します🔥");
-  window.location.href = "/secret.html";
+function activateSecret() {
+  const screen = document.getElementById("blackout");
+  screen.classList.add("active");
+
+  // “ザザッ…”って感じのわずかな遅延を入れる
+  setTimeout(() => {
+    // 例：隠しページ移動（好きに変えてOK）
+    window.location.href = "/secret.html";
+  }, 700);
 }
