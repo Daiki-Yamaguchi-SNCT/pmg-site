@@ -47,3 +47,23 @@
     // 初期表示
     showSliderSlide(currentSlideIndex);
     startSliderAutoSlide();
+
+    const secret = ["ArrowUp","ArrowUp","ArrowDown","ArrowDown","ArrowLeft","ArrowRight","ArrowLeft","ArrowRight","b","a"];
+let pos = 0;
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === secret[pos]) {
+    pos++;
+    if (pos === secret.length) {
+      triggerSecret(); // 裏コマンド発動
+      pos = 0;
+    }
+  } else {
+    pos = 0; // 途中でミスったらリセット
+  }
+});
+
+function triggerSecret() {
+  alert("裏コマンド発動！隠しページへ移動します🔥");
+  window.location.href = "/secret.html";
+}
