@@ -143,6 +143,21 @@ table{
     background-color: #fff; /* アクティブなインジケーターを白色に */
 }
 
+/* ノイズ動画 */
+#noiseVideo {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 9998;
+}
+
+/* ブラックアウト */
 #blackout {
   position: fixed;
   top: 0;
@@ -151,9 +166,14 @@ table{
   height: 100vh;
   background: black;
   opacity: 0;
-  pointer-events: none; /* 表示されるまで邪魔しない */
-  transition: opacity 0.6s ease; 
-  z-index: 9999; /* 最前面 */
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  z-index: 9999;
+}
+
+/* アクティブクラス */
+#noiseVideo.active {
+  opacity: 1;
 }
 
 #blackout.active {
