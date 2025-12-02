@@ -15,3 +15,15 @@ figcaption{
 #paraibasi{
     font-size:60%;
 }
+
+.bordernone{
+    border:none;
+}
+
+.chkbox{
+	width:			24px;
+	height:			24px;
+	-moz-transform:		scale(1.4);
+	-webkit-transform:	scale(1.4);
+	transform:		scale(1.4);
+}
