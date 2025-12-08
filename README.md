@@ -4,3 +4,5 @@
 https://repo5.com/kakikon/view.cgi?ID=251112162906450&MODE=
 
 index.htmlのファイル内で＜style＞,＜script＞を使うのを禁ずる。かならずstyle.css,main.jsに書くこと。
+
+はらちゃんは東芝さんの「ぱらちゃん」をAIによって作り変えた創作物です。
