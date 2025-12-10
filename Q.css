@@ -14,7 +14,7 @@ figcaption{
 }
 
 #paraibasi{
-    font-size:60%;
+    font-size:75%;
 }
 
 .bordernone{
@@ -37,7 +37,7 @@ figcaption{
     border-top: 0px solid #999;
 }
 .radius-table tr>*{
-    padding: 1px 1px;
+    padding: 5px 5px;
     border: none;
     border-right: 0px solid #999;
     border-bottom: 0px solid #999;
@@ -54,3 +54,4 @@ figcaption{
 .radius-table tr:last-child>*:last-child{
     border-radius: 0 0 10px 0;
 }
+
