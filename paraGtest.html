@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UnderSea Game</title>
+  <style>
+    body { margin: 0; overflow: hidden; background: #001a2d; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.158/build/three.module.js";
+import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.158/examples/jsm/loaders/GLTFLoader.js";
+
+const loader = new GLTFLoader();
+
+loader.load("はらちゃん.glb", (gltf) => {
+  scene.add(gltf.scene);
+});
+
+/* ---------------- 基本セットアップ ---------------- */
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x003344, 20, 120); // ★世界の境界を隠す
+
+const camera = new THREE.PerspectiveCamera(
+  70, innerWidth / innerHeight, 0.1, 200
+);
+camera.position.set(0, 2, 5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+renderer.setClearColor(0x003344);
+document.body.appendChild(renderer.domElement);
+
+/* ---------------- 光（明るくする） ---------------- */
+scene.add(new THREE.AmbientLight(0x88ccff, 0.8));
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+dirLight.position.set(5, 10, 5);
+scene.add(dirLight);
+
+/* ---------------- 海底（無限に見せる） ---------------- */
+const floorGeo = new THREE.PlaneGeometry(500, 500);
+const floorMat = new THREE.MeshStandardMaterial({ color: 0x224444 });
+const floor = new THREE.Mesh(floorGeo, floorMat);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
+
+/* ---------------- プレイヤー ---------------- */
+const player = new THREE.Mesh(
+  new THREE.SphereGeometry(0.4, 16, 16),
+  new THREE.MeshStandardMaterial({ color: 0xffffaa })
+);
+player.position.y = 1;
+scene.add(player);
+
+/* ---------------- WASD操作 ---------------- */
+const keys = {};
+addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+
+/* ---------------- 海藻（揺れる・当たり判定なし） ---------------- */
+const seaweeds = [];
+for (let i = 0; i < 80; i++) {
+  const geo = new THREE.CylinderGeometry(0.05, 0.1, 4, 6);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x228833 });
+  const weed = new THREE.Mesh(geo, mat);
+
+  weed.position.set(
+    (Math.random() - 0.5) * 200,
+    2,
+    (Math.random() - 0.5) * 200
+  );
+  weed.userData.offset = Math.random() * Math.PI * 2;
+  seaweeds.push(weed);
+  scene.add(weed);
+}
+
+/* ---------------- 敵（GLB） ---------------- */
+const enemies = [];
+const loader = new GLTFLoader();
+loader.load("models/enemy.glb", gltf => {
+  for (let i = 0; i < 6; i++) {
+    const e = gltf.scene.clone();
+    e.position.set(
+      (Math.random() - 0.5) * 50,
+      1,
+      (Math.random() - 0.5) * 50
+    );
+    scene.add(e);
+    enemies.push(e);
+  }
+});
+
+/* ---------------- ループ ---------------- */
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  // プレイヤー移動
+  const speed = 0.08;
+  if (keys["w"]) player.position.z -= speed;
+  if (keys["s"]) player.position.z += speed;
+  if (keys["a"]) player.position.x -= speed;
+  if (keys["d"]) player.position.x += speed;
+
+  // カメラ追従
+  camera.position.lerp(
+    new THREE.Vector3(
+      player.position.x,
+      player.position.y + 2,
+      player.position.z + 5
+    ),
+    0.1
+  );
+  camera.lookAt(player.position);
+
+  // 海藻ふにゃふにゃ
+  seaweeds.forEach(w => {
+    w.rotation.z = Math.sin(t + w.userData.offset) * 0.3;
+  });
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
+addEventListener("resize", () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
