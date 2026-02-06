@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>もちもちクリック</title>
+<style>
+  body {
+    background:#eef;
+    font-family: sans-serif;
+    text-align:center;
+  }
+  #chara {
+    width:200px;
+    cursor:pointer;
+    transition: transform 0.1s;
+  }
+  #chara:active {
+    transform: scale(0.95);
+  }
+  #msg {
+    font-size:18px;
+    margin:10px;
+  }
+</style>
+</head>
+<body>
+
+<h2>もちもちくん</h2>
+<p id="msg">のんびりしている…</p>
+
+<img id="chara" src="https://dummyimage.com/400x250/ffffff/000000&text=もちもち" />
+
+<p>スコア：<span id="score">0</span></p>
+
+<script>
+let score = 0;
+let mood = 0; // -1=疲れ 0=普通 1=ごきげん
+
+const msg = document.getElementById("msg");
+const scoreEl = document.getElementById("score");
+const chara = document.getElementById("chara");
+
+chara.onclick = () => {
+  score++;
+  mood++;
+
+  if (mood > 3) {
+    msg.textContent = "怒った！連打しすぎ！";
+    mood = -2;
+    score -= 2;
+  } else {
+    msg.textContent = "ぷにっ！よろこんでる";
+  }
+  scoreEl.textContent = score;
+};
+
+// 放置すると変化
+setInterval(() => {
+  mood--;
+  if (mood < -2) {
+    msg.textContent = "すやすや寝ている…";
+  }
+}, 3000);
+</script>
+
+</body>
+</html>
