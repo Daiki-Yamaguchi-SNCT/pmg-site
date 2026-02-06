@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ocean Game - Visible Edition</title>
+<title>Ocean Game - Stable Light</title>
 <style>
-  body { margin:0; overflow:hidden; background:#6ec6ff; }
+  body { margin:0; overflow:hidden; background:#003344; }
 </style>
 </head>
 <body>
@@ -13,36 +13,39 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.158/build/three.module.js";
 import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.158/examples/jsm/loaders/GLTFLoader.js";
 
-/* ========= 基本 ========= */
+/* ========= シーン ========= */
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x6ec6ff, 150, 600);
+scene.fog = new THREE.Fog(0x003344, 80, 350); // ← 前の落ち着いた霧
 
-const camera = new THREE.PerspectiveCamera(65, innerWidth/innerHeight, 0.1, 1000);
-camera.position.set(0, 5, 12);
+/* ========= カメラ ========= */
+const camera = new THREE.PerspectiveCamera(70, innerWidth/innerHeight, 0.1, 800);
+camera.position.set(0, 4, 10);
 
+/* ========= レンダラー ========= */
 const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setClearColor(0x6ec6ff);
+renderer.setClearColor(0x003344);
+renderer.setPixelRatio(devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-/* ========= 光（白飛びしない） ========= */
-scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-const sun = new THREE.DirectionalLight(0xffffff, 0.9);
-sun.position.set(30, 50, 30);
-scene.add(sun);
+/* ========= 光（見える基準） ========= */
+scene.add(new THREE.AmbientLight(0x88ccff, 0.9));
+const light = new THREE.DirectionalLight(0xffffff, 0.8);
+light.position.set(10, 20, 10);
+scene.add(light);
 
 /* ========= 海底 ========= */
 const floor = new THREE.Mesh(
-  new THREE.PlaneGeometry(1000,1000),
-  new THREE.MeshStandardMaterial({ color:0xeeddaa })
+  new THREE.PlaneGeometry(600,600),
+  new THREE.MeshStandardMaterial({ color:0x224444 })
 );
 floor.rotation.x = -Math.PI/2;
 scene.add(floor);
 
-/* ========= プレイヤー（必ず見える） ========= */
+/* ========= プレイヤー ========= */
 const player = new THREE.Mesh(
   new THREE.SphereGeometry(0.5, 16, 16),
-  new THREE.MeshStandardMaterial({ color:0xffcc00 })
+  new THREE.MeshStandardMaterial({ color:0xffffaa })
 );
 player.position.set(0,1,0);
 scene.add(player);
@@ -52,38 +55,38 @@ const keys = {};
 addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
 addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
 
-/* ========= 海藻（装飾・当たり判定なし） ========= */
+/* ========= 海藻（装飾） ========= */
 const seaweeds=[];
-for(let i=0;i<120;i++){
+for(let i=0;i<80;i++){
   const w = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.06,0.12,6,8),
-    new THREE.MeshStandardMaterial({ color:0x33aa66 })
+    new THREE.CylinderGeometry(0.06,0.12,5,6),
+    new THREE.MeshStandardMaterial({ color:0x228833 })
   );
   w.position.set(
-    (Math.random()-0.5)*600,
-    3,
-    (Math.random()-0.5)*600
+    (Math.random()-0.5)*300,
+    2.5,
+    (Math.random()-0.5)*300
   );
-  w.userData.o = Math.random()*Math.PI*2;
+  w.userData.o=Math.random()*Math.PI*2;
   seaweeds.push(w);
   scene.add(w);
 }
 
 /* ========= 岩 ========= */
-for(let i=0;i<40;i++){
+for(let i=0;i<30;i++){
   const rock = new THREE.Mesh(
     new THREE.DodecahedronGeometry(1+Math.random()),
-    new THREE.MeshStandardMaterial({ color:0x888888 })
+    new THREE.MeshStandardMaterial({ color:0x666666 })
   );
   rock.position.set(
-    (Math.random()-0.5)*300,
+    (Math.random()-0.5)*200,
     1,
-    (Math.random()-0.5)*300
+    (Math.random()-0.5)*200
   );
   scene.add(rock);
 }
 
-/* ========= エネミー（GLBなければ仮） ========= */
+/* ========= エネミー（仮→GLB） ========= */
 const enemies=[];
 function spawnEnemy(obj){
   obj.position.set(
@@ -95,28 +98,25 @@ function spawnEnemy(obj){
   enemies.push(obj);
 }
 
-/* 仮エネミー（必ず出る） */
+/* 仮エネミー */
 for(let i=0;i<5;i++){
-  const dummy = new THREE.Mesh(
+  spawnEnemy(new THREE.Mesh(
     new THREE.BoxGeometry(1,1,1),
     new THREE.MeshStandardMaterial({ color:0xff4444 })
-  );
-  spawnEnemy(dummy);
+  ));
 }
 
 /* GLBあれば差し替え */
-const loader = new GLTFLoader();
+const loader=new GLTFLoader();
 loader.load(
   "models/enemy.glb",
   g=>{
     enemies.forEach(e=>scene.remove(e));
     enemies.length=0;
-    for(let i=0;i<5;i++){
-      spawnEnemy(g.scene.clone());
-    }
+    for(let i=0;i<5;i++) spawnEnemy(g.scene.clone());
   },
   undefined,
-  ()=>{ /* 読めなくても無視 */ }
+  ()=>{}
 );
 
 /* ========= ループ ========= */
@@ -125,7 +125,7 @@ function animate(){
   requestAnimationFrame(animate);
   const t=clock.getElapsedTime();
 
-  const speed=0.12;
+  const speed=0.1;
   if(keys["w"]) player.position.z-=speed;
   if(keys["s"]) player.position.z+=speed;
   if(keys["a"]) player.position.x-=speed;
@@ -134,19 +134,14 @@ function animate(){
   camera.position.lerp(
     new THREE.Vector3(
       player.position.x,
-      player.position.y+5,
-      player.position.z+12
-    ),0.08
+      player.position.y+4,
+      player.position.z+10
+    ),0.1
   );
   camera.lookAt(player.position);
 
   seaweeds.forEach(w=>{
-    w.rotation.z = Math.sin(t+w.userData.o)*0.3;
-  });
-
-  enemies.forEach(e=>{
-    e.position.x += Math.sin(t*0.5)*0.01;
-    e.position.z += Math.cos(t*0.5)*0.01;
+    w.rotation.z=Math.sin(t+w.userData.o)*0.25;
   });
 
   renderer.render(scene,camera);
