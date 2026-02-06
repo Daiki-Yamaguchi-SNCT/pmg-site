@@ -96,9 +96,7 @@ scene.add(floor);
 
 // ===== プレイヤー（画像スプライト） =====
 // ★ここを自分のキャラ画像に変更できる
-const texture=new THREE.TextureLoader().load(
-"https://dummyimage.com/256x256/ffffff/000000.png&text=CHARA"
-);
+const texture=new THREE.TextureLoader().load("yukorin.files/はらちゃん.png");
 
 const mat=new THREE.SpriteMaterial({map:texture});
 player=new THREE.Sprite(mat);
