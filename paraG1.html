@@ -1,67 +1,89 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>もちもちクリック</title>
+<title>3D Energy Collect</title>
 <style>
-  body {
-    background:#eef;
-    font-family: sans-serif;
-    text-align:center;
-  }
-  #chara {
-    width:200px;
-    cursor:pointer;
-    transition: transform 0.1s;
-  }
-  #chara:active {
-    transform: scale(0.95);
-  }
-  #msg {
-    font-size:18px;
-    margin:10px;
-  }
+body { margin:0; overflow:hidden; }
+#score {
+  position:absolute;
+  top:10px;
+  left:10px;
+  color:white;
+  font-size:20px;
+}
 </style>
 </head>
 <body>
+<div id="score">Score: 0</div>
 
-<h2>もちもちくん</h2>
-<p id="msg">のんびりしている…</p>
-
-<img id="chara" src="https://dummyimage.com/400x250/ffffff/000000&text=もちもち" />
-
-<p>スコア：<span id="score">0</span></p>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 
 <script>
+let scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000022);
+
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+camera.position.z = 5;
+
+let renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+let light = new THREE.PointLight(0xffffff, 1);
+light.position.set(5,5,5);
+scene.add(light);
+
+// プレイヤー
+let playerGeo = new THREE.SphereGeometry(0.3, 32, 32);
+let playerMat = new THREE.MeshStandardMaterial({color:0x00ffff});
+let player = new THREE.Mesh(playerGeo, playerMat);
+scene.add(player);
+
+// エネルギー
+let energyGeo = new THREE.SphereGeometry(0.2, 16, 16);
+let energyMat = new THREE.MeshStandardMaterial({color:0xffff00});
+let energy = new THREE.Mesh(energyGeo, energyMat);
+scene.add(energy);
+
+function randomizeEnergy(){
+  energy.position.x = (Math.random()-0.5)*6;
+  energy.position.y = (Math.random()-0.5)*4;
+}
+randomizeEnergy();
+
 let score = 0;
-let mood = 0; // -1=疲れ 0=普通 1=ごきげん
+let speed = 0.05;
 
-const msg = document.getElementById("msg");
-const scoreEl = document.getElementById("score");
-const chara = document.getElementById("chara");
+let keys = {};
+document.addEventListener("keydown", e=>keys[e.key]=true);
+document.addEventListener("keyup", e=>keys[e.key]=false);
 
-chara.onclick = () => {
-  score++;
-  mood++;
+function animate(){
+  requestAnimationFrame(animate);
 
-  if (mood > 3) {
-    msg.textContent = "怒った！連打しすぎ！";
-    mood = -2;
-    score -= 2;
-  } else {
-    msg.textContent = "ぷにっ！よろこんでる";
+  if(keys["w"]) player.position.y += speed;
+  if(keys["s"]) player.position.y -= speed;
+  if(keys["a"]) player.position.x -= speed;
+  if(keys["d"]) player.position.x += speed;
+
+  // 当たり判定
+  if(player.position.distanceTo(energy.position) < 0.5){
+    score++;
+    speed += 0.002; // だんだん速く（中毒性）
+    document.getElementById("score").textContent = "Score: " + score;
+    randomizeEnergy();
+
+    // 世界の色少し変化
+    scene.background.offsetHSL(0.02,0,0);
   }
-  scoreEl.textContent = score;
-};
 
-// 放置すると変化
-setInterval(() => {
-  mood--;
-  if (mood < -2) {
-    msg.textContent = "すやすや寝ている…";
-  }
-}, 3000);
+  energy.rotation.y += 0.05;
+
+  renderer.render(scene, camera);
+}
+
+animate();
 </script>
-
 </body>
 </html>
