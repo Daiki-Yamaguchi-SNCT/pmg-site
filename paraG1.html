@@ -14,6 +14,12 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.158/build/three.module.js";
 import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.158/examples/jsm/loaders/GLTFLoader.js";
 
+const loader = new GLTFLoader();
+
+loader.load("はらちゃん.glb", (gltf) => {
+  scene.add(gltf.scene);
+});
+
 /* ---------------- シーン ---------------- */
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x7fd7ff, 40, 180); // ★明るい霧
