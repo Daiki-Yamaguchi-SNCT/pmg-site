@@ -1,228 +1,182 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Arena Game</title>
-
+<meta charset="utf-8">
+<title>3D Game</title>
 <style>
-body{
-  margin:0;
-  overflow:hidden;
-  background:#87CEEB;
-  font-family:sans-serif;
-}
-#ui{
-  position:absolute;
-  top:10px;
-  left:10px;
-  color:white;
-  font-size:20px;
-  text-shadow:0 0 5px black;
-}
-#gameover{
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  color:white;
-  font-size:40px;
-  text-align:center;
-  display:none;
-}
-button{
-  font-size:24px;
-  padding:10px 20px;
+body { margin:0; overflow:hidden; background:#000; }
+#ui {
+ position:fixed;
+ left:10px;
+ top:10px;
+ color:white;
+ font-family:sans-serif;
 }
 </style>
-
 </head>
+
 <body>
-
-<div id="ui">
-Score: <span id="score">0</span>
-</div>
-
-<div id="gameover">
-GAME OVER<br>
-<button onclick="restart()">RESTART</button>
-</div>
+<div id="ui">Score: <span id="score">0</span></div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 
 <script>
-let scene,camera,renderer;
-let player;
-let items=[];
-let enemies=[];
-let score=0;
-let gameOver=false;
-let difficulty=1;
+// ===== 基本 =====
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x222244);
 
-init();
-animate();
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+camera.position.set(0,5,8);
 
-function init(){
-
-scene=new THREE.Scene();
-
-camera=new THREE.PerspectiveCamera(
-75,
-window.innerWidth/window.innerHeight,
-0.1,
-1000
-);
-camera.position.set(0,12,12);
-camera.lookAt(0,0,0);
-
-renderer=new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(window.innerWidth,window.innerHeight);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Light
-const light=new THREE.DirectionalLight(0xffffff,1);
-light.position.set(5,10,7);
+// ===== ライト =====
+const light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(5,10,5);
 scene.add(light);
 
-scene.add(new THREE.AmbientLight(0xffffff,0.7));
-
-// Floor
-const floor=new THREE.Mesh(
-new THREE.CircleGeometry(15,32),
-new THREE.MeshStandardMaterial({color:0x66ccff})
+// ===== 床 =====
+const floor = new THREE.Mesh(
+ new THREE.PlaneGeometry(50,50),
+ new THREE.MeshStandardMaterial({color:0x334455})
 );
-floor.rotation.x=-Math.PI/2;
+floor.rotation.x = -Math.PI/2;
 scene.add(floor);
 
-// ===== プレイヤー（画像スプライト） =====
-// ★ここを自分のキャラ画像に変更できる
-const texture=new THREE.TextureLoader().load("yukorin.files/はらちゃん.png");
-
-const mat=new THREE.SpriteMaterial({map:texture});
-player=new THREE.Sprite(mat);
-player.scale.set(2,2,1);
-player.position.y=1;
+// ===== プレイヤー（キャラ代わり）=====
+const player = new THREE.Mesh(
+ new THREE.SphereGeometry(0.6,16,16),
+ new THREE.MeshStandardMaterial({color:0x44ff88})
+);
+player.position.y = 0.6;
 scene.add(player);
 
-// 初期スポーン
-for(let i=0;i<5;i++) spawnItem();
-for(let i=0;i<3;i++) spawnEnemy();
-
-// 操作
-window.addEventListener("pointerdown",movePlayer);
-window.addEventListener("resize",onResize);
-
-}
-
-function spawnItem(){
-const mesh=new THREE.Mesh(
-new THREE.SphereGeometry(0.5,16,16),
-new THREE.MeshStandardMaterial({color:0xffff00})
-);
-
-let angle=Math.random()*Math.PI*2;
-let radius=8+Math.random()*5;
-
-mesh.position.set(
-Math.cos(angle)*radius,
-0.5,
-Math.sin(angle)*radius
-);
-
-scene.add(mesh);
-items.push(mesh);
-}
+// ===== 敵 =====
+const enemies = [];
 
 function spawnEnemy(){
-const mesh=new THREE.Mesh(
-new THREE.BoxGeometry(1,1,1),
-new THREE.MeshStandardMaterial({color:0xff3333})
-);
+ const e = new THREE.Mesh(
+  new THREE.BoxGeometry(0.8,0.8,0.8),
+  new THREE.MeshStandardMaterial({color:0xff4444})
+ );
 
-let angle=Math.random()*Math.PI*2;
-let radius=8+Math.random()*5;
+ e.position.set(
+  (Math.random()-0.5)*20,
+  0.5,
+  (Math.random()-0.5)*20
+ );
 
-mesh.position.set(
-Math.cos(angle)*radius,
-0.5,
-Math.sin(angle)*radius
-);
+ e.userData = {
+  type: Math.floor(Math.random()*3),
+  speed: 2 + Math.random()*2,
+  t: Math.random()*10
+ };
 
-scene.add(mesh);
-enemies.push(mesh);
+ scene.add(e);
+ enemies.push(e);
 }
 
-function movePlayer(e){
+setInterval(spawnEnemy, 1200);
 
-if(gameOver) return;
+// ===== 入力 =====
+const key = {};
+addEventListener("keydown", e=> key[e.key.toLowerCase()]=true);
+addEventListener("keyup", e=> key[e.key.toLowerCase()]=false);
 
-let x=(e.clientX/window.innerWidth)*2-1;
-let z=(e.clientY/window.innerHeight)*2-1;
-
-player.position.x=x*10;
-player.position.z=z*10;
-}
-
-function animate(){
-requestAnimationFrame(animate);
-
-if(!gameOver){
-updateGame();
-}
-
-renderer.render(scene,camera);
-}
-
-function updateGame(){
-
-// ===== 当たり判定 =====
-
-// アイテム
-items.forEach((item,i)=>{
-if(item.position.distanceTo(player.position)<1.5){
-scene.remove(item);
-items.splice(i,1);
-score++;
-document.getElementById("score").textContent=score;
-
-spawnItem();
-
-// 難易度アップ
-difficulty+=0.05;
-if(Math.random()<0.5){
-spawnEnemy();
-}
-}
+// タッチ
+let touchX=0, touchY=0;
+addEventListener("touchmove", e=>{
+ const t = e.touches[0];
+ touchX = (t.clientX/innerWidth -0.5)*2;
+ touchY = (t.clientY/innerHeight-0.5)*2;
 });
 
-// 敵
-enemies.forEach(enemy=>{
+// ===== スコア =====
+let score=0;
+const scoreEl = document.getElementById("score");
 
-enemy.position.x+=Math.sin(Date.now()*0.001)*0.02*difficulty;
-enemy.position.z+=Math.cos(Date.now()*0.001)*0.02*difficulty;
+// ===== ループ（時空歪み対策）=====
+let last = performance.now();
 
-if(enemy.position.distanceTo(player.position)<1.5){
-endGame();
+function loop(now){
+ const dt = (now-last)/1000;
+ last = now;
+
+ update(dt);
+ renderer.render(scene,camera);
+ requestAnimationFrame(loop);
 }
+requestAnimationFrame(loop);
+
+// ===== 更新 =====
+function update(dt){
+
+ const speed = 6;
+
+ // WASD
+ if(key.w) player.position.z -= speed*dt;
+ if(key.s) player.position.z += speed*dt;
+ if(key.a) player.position.x -= speed*dt;
+ if(key.d) player.position.x += speed*dt;
+
+ // タッチ
+ player.position.x += touchX * speed * dt;
+ player.position.z += touchY * speed * dt;
+
+ // カメラ追従
+ camera.position.x += (player.position.x - camera.position.x)*0.1;
+ camera.position.z += (player.position.z + 8 - camera.position.z)*0.1;
+ camera.lookAt(player.position);
+
+ // 敵AI
+ enemies.forEach(e=>{
+  const dx = player.position.x - e.position.x;
+  const dz = player.position.z - e.position.z;
+  const dist = Math.sqrt(dx*dx + dz*dz);
+
+  if(e.userData.type===0){
+   // 直線追尾
+   e.position.x += dx/dist * e.userData.speed * dt;
+   e.position.z += dz/dist * e.userData.speed * dt;
+  }
+
+  if(e.userData.type===1){
+   // 遅延追尾
+   e.userData.t += dt;
+   if(Math.sin(e.userData.t)>0){
+    e.position.x += dx/dist * e.userData.speed * dt;
+    e.position.z += dz/dist * e.userData.speed * dt;
+   }
+  }
+
+  if(e.userData.type===2){
+   // ジグザグ
+   e.userData.t += dt*5;
+   e.position.x += Math.sin(e.userData.t)*3*dt;
+   e.position.z += dz/dist * e.userData.speed * dt;
+  }
+
+  // 当たり判定
+  if(dist<1){
+   score=0;
+   scoreEl.textContent=score;
+   player.position.set(0,0.6,0);
+  }
+ });
+
+ // スコア加算
+ score += dt*10;
+ scoreEl.textContent = Math.floor(score);
+}
+
+// ===== リサイズ =====
+addEventListener("resize",()=>{
+ camera.aspect = innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth, innerHeight);
 });
-
-}
-
-function endGame(){
-gameOver=true;
-document.getElementById("gameover").style.display="block";
-}
-
-function restart(){
-location.reload();
-}
-
-function onResize(){
-camera.aspect=window.innerWidth/window.innerHeight;
-camera.updateProjectionMatrix();
-renderer.setSize(window.innerWidth,window.innerHeight);
-}
 </script>
-
 </body>
 </html>
