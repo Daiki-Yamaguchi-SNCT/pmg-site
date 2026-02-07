@@ -3,26 +3,67 @@
 <head>
 <meta charset="utf-8">
 <title>Underwater Arena</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-html,body{margin:0;padding:0;overflow:hidden;background:#001b2e;}
-#ui{position:fixed;top:10px;left:10px;color:#e8f6ff;font-family:sans-serif;font-size:18px}
-#msg{position:fixed;top:40px;left:10px;color:#ffd;font-family:sans-serif}
+html,body{
+ margin:0;
+ padding:0;
+ overflow:hidden;
+ background:#001b2e;
+}
+#ui{
+ position:fixed;
+ top:10px;
+ left:10px;
+ color:#e8f6ff;
+ font-family:sans-serif;
+ font-size:18px;
+}
+#msg{
+ position:fixed;
+ top:40px;
+ left:10px;
+ color:#ffd;
+ font-family:sans-serif;
+}
 </style>
 </head>
+
 <body>
 <div id="ui">Score: <span id="score">0</span></div>
 <div id="msg"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<!-- three本体 -->
+<script src="three.min.js"></script>
+
+<!-- 非module版GLTFLoader（重要） -->
+<script src="GLTFLoader.js"></script>
+
 <script>
+
+// =====================
+// GLBロード
+// =====================
+const gltfLoader = new THREE.GLTFLoader();
+let enemyModel = null;
+
+gltfLoader.load(
+ "./models/hara.glb",
+ (gltf)=>{
+   enemyModel = gltf.scene;
+   console.log("GLB loaded");
+ },
+ undefined,
+ (err)=>{
+   console.log("GLB load error", err);
+ }
+);
 
 // =====================
 // シーン
 // =====================
 const scene=new THREE.Scene();
-// フォグを深く・遠くまで（境界を消す）
-scene.fog=new THREE.FogExp2(0x0b3c5d, 0.035);
+scene.fog=new THREE.FogExp2(0x0b3c5d,0.035);
 
 const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,1000);
 camera.position.set(0,5,10);
@@ -32,26 +73,28 @@ renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // =====================
-// ライト（海中）
+// ライト
 // =====================
 scene.add(new THREE.AmbientLight(0x88ccee,0.9));
+
 const dir=new THREE.DirectionalLight(0xaadfff,0.7);
 dir.position.set(5,12,5);
 scene.add(dir);
 
 // =====================
-// スカイドーム（グラデーション風）
+// スカイドーム
 // =====================
-const domeGeo=new THREE.SphereGeometry(120,32,32);
-const domeMat=new THREE.MeshBasicMaterial({
-  color:0x0b3c5d,
-  side:THREE.BackSide
-});
-const dome=new THREE.Mesh(domeGeo,domeMat);
+const dome=new THREE.Mesh(
+ new THREE.SphereGeometry(120,32,32),
+ new THREE.MeshBasicMaterial({
+   color:0x0b3c5d,
+   side:THREE.BackSide
+ })
+);
 scene.add(dome);
 
 // =====================
-// 海底（端が見えないよう大きく）
+// 海底
 // =====================
 const floor=new THREE.Mesh(
  new THREE.PlaneGeometry(200,200),
@@ -61,18 +104,17 @@ floor.rotation.x=-Math.PI/2;
 scene.add(floor);
 
 // =====================
-// 障害物（岩のみ当たり判定あり）
+// 岩
 // =====================
 const obstacles=[];
-function addObstacle(mesh,radius){
- mesh.userData.radius=radius;
+function addObstacle(mesh,r){
+ mesh.userData.radius=r;
  obstacles.push(mesh);
  scene.add(mesh);
 }
 
-// 岩
-for(let i=0;i<35;i++){
- const r=Math.random()*1.2+0.8;
+for(let i=0;i<30;i++){
+ const r=Math.random()*1+0.8;
  const rock=new THREE.Mesh(
   new THREE.DodecahedronGeometry(r),
   new THREE.MeshStandardMaterial({color:0x445566,roughness:1})
@@ -82,17 +124,24 @@ for(let i=0;i<35;i++){
 }
 
 // =====================
-// 海藻（当たり判定なし・背高・揺れる）
+// 海藻（軽量化少し）
 // =====================
 const kelps=[];
-for(let i=0;i<70;i++){
- const h=Math.random()*10+8; // 高くする
+for(let i=0;i<50;i++){
+ const h=Math.random()*10+8;
+
  const kelp=new THREE.Mesh(
   new THREE.CylinderGeometry(0.15,0.3,h,6,1,true),
   new THREE.MeshStandardMaterial({color:0x2e8b57})
  );
- kelp.position.set((Math.random()-0.5)*120,h/2,(Math.random()-0.5)*120);
- kelp.userData={t:Math.random()*10,height:h};
+
+ kelp.position.set(
+  (Math.random()-0.5)*120,
+  h/2,
+  (Math.random()-0.5)*120
+ );
+
+ kelp.userData={t:Math.random()*10};
  scene.add(kelp);
  kelps.push(kelp);
 }
@@ -111,22 +160,39 @@ scene.add(player);
 // 敵
 // =====================
 let enemies=[];
+
 function spawnEnemy(){
- const e=new THREE.Mesh(
-  new THREE.BoxGeometry(0.9,0.9,0.9),
-  new THREE.MeshStandardMaterial({color:0xff4444})
+
+ if(!enemyModel) return;
+
+ const e = enemyModel.clone(true);
+
+ e.position.set(
+  (Math.random()-0.5)*40,
+  0,
+  (Math.random()-0.5)*40
  );
- e.position.set((Math.random()-0.5)*40,0.45,(Math.random()-0.5)*40);
- e.userData={type:Math.floor(Math.random()*3),speed:1.8+Math.random()*2.2,t:Math.random()*5};
+
+ e.scale.set(1,1,1);
+
+ e.userData={
+  type:Math.floor(Math.random()*3),
+  speed:1.8+Math.random()*2,
+  t:Math.random()*5
+ };
+
  scene.add(e);
  enemies.push(e);
 }
-setInterval(spawnEnemy,1200);
+
+// 出現少し遅く（軽量化）
+setInterval(spawnEnemy,1600);
 
 // =====================
 // 入力
 // =====================
 const key={};
+
 addEventListener("keydown",e=>key[e.key.toLowerCase()]=true);
 addEventListener("keyup",e=>key[e.key.toLowerCase()]=false);
 
@@ -135,23 +201,28 @@ addEventListener("touchmove",e=>{
  const t=e.touches[0];
  touchX=(t.clientX/innerWidth-0.5)*2;
  touchY=(t.clientY/innerHeight-0.5)*2;
-},{passive:false});
+});
 
 // =====================
-// スコア & 状態
+// 状態
 // =====================
 let score=0;
-const scoreEl=document.getElementById("score");
-const msg=document.getElementById("msg");
 let invincible=0;
 const SAFE_RADIUS=3;
+
+const scoreEl=document.getElementById("score");
+const msg=document.getElementById("msg");
 
 // =====================
 // ループ
 // =====================
 let last=performance.now();
+
 function loop(now){
- const dt=(now-last)/1000; last=now;
+
+ const dt=(now-last)/1000;
+ last=now;
+
  update(dt);
  renderer.render(scene,camera);
  requestAnimationFrame(loop);
@@ -162,6 +233,7 @@ requestAnimationFrame(loop);
 // 更新
 // =====================
 function update(dt){
+
  const speed=6;
 
  // 移動
@@ -170,23 +242,27 @@ function update(dt){
  if(key.s) vz+=1;
  if(key.a) vx-=1;
  if(key.d) vx+=1;
+
  player.position.x+=(vx+touchX)*speed*dt;
  player.position.z+=(vz+touchY)*speed*dt;
 
- // 岩当たり判定（押し戻し）
+ // 岩当たり
  obstacles.forEach(o=>{
   const dx=player.position.x-o.position.x;
   const dz=player.position.z-o.position.z;
   const dist=Math.hypot(dx,dz);
   const min=o.userData.radius+0.7;
+
   if(dist<min){
-   const nx=dx/(dist+0.001), nz=dz/(dist+0.001);
+   const nx=dx/(dist+0.001);
+   const nz=dz/(dist+0.001);
+
    player.position.x=o.position.x+nx*min;
    player.position.z=o.position.z+nz*min;
   }
  });
 
- // 海藻アニメーション（揺れ）
+ // 海藻アニメ
  kelps.forEach(k=>{
   k.userData.t+=dt;
   k.rotation.z=Math.sin(k.userData.t)*0.15;
@@ -199,6 +275,7 @@ function update(dt){
 
  // 敵AI
  enemies.forEach(e=>{
+
   const dx=player.position.x-e.position.x;
   const dz=player.position.z-e.position.z;
   const dist=Math.hypot(dx,dz)+0.001;
@@ -206,13 +283,15 @@ function update(dt){
   if(e.userData.type===0){
    e.position.x+=dx/dist*e.userData.speed*dt;
    e.position.z+=dz/dist*e.userData.speed*dt;
-  }else if(e.userData.type===1){
+  }
+  else if(e.userData.type===1){
    e.userData.t+=dt;
    if(Math.sin(e.userData.t)>0){
     e.position.x+=dx/dist*e.userData.speed*dt;
     e.position.z+=dz/dist*e.userData.speed*dt;
    }
-  }else{
+  }
+  else{
    e.userData.t+=dt*5;
    e.position.x+=Math.sin(e.userData.t)*3*dt;
    e.position.z+=dz/dist*e.userData.speed*dt;
@@ -226,8 +305,10 @@ function update(dt){
   if(invincible<=0 && dist<1){
    gameOver();
   }
+
  });
 
+ // 無敵
  if(invincible>0){
   invincible-=dt;
   msg.textContent="INVINCIBLE";
@@ -240,13 +321,18 @@ function update(dt){
 }
 
 // =====================
-// ゲームオーバー
+// GameOver
 // =====================
 function gameOver(){
- score=0; scoreEl.textContent=0;
+
+ score=0;
+ scoreEl.textContent=0;
+
  player.position.set(0,0.7,0);
+
  enemies.forEach(e=>scene.remove(e));
  enemies=[];
+
  invincible=3;
 }
 
@@ -258,6 +344,7 @@ addEventListener("resize",()=>{
  camera.updateProjectionMatrix();
  renderer.setSize(innerWidth,innerHeight);
 });
+
 </script>
 </body>
 </html>
