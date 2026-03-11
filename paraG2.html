@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<title>Underwater Arena - Battle Edition</title>
+<title>Underwater Arena - Dash Attack</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <style>
 html,body{margin:0;padding:0;overflow:hidden;background:#001b2e;font-family:'Arial',sans-serif;}
@@ -16,9 +16,9 @@ html,body{margin:0;padding:0;overflow:hidden;background:#001b2e;font-family:'Ari
 #boss-health{position:fixed;top:50px;left:50%;transform:translateX(-50%);width:400px;height:30px;background:rgba(0,0,0,0.7);border:2px solid #ff4444;border-radius:5px;display:none;}
 #boss-health-bar{height:100%;background:linear-gradient(90deg,#ff0000,#ff8800);border-radius:3px;transition:width 0.3s;}
 #boss-name{position:fixed;top:30px;left:50%;transform:translateX(-50%);color:#ff4444;font-size:24px;font-weight:bold;text-shadow:2px 2px 4px #000;display:none;}
-#special-meter{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);width:200px;height:20px;background:rgba(0,0,0,0.7);border:2px solid #ffdd00;border-radius:5px;}
-#special-bar{height:100%;background:linear-gradient(90deg,#ffdd00,#ff8800);border-radius:3px;transition:width 0.1s;}
-#special-text{position:fixed;bottom:35px;left:50%;transform:translateX(-50%);color:#ffdd00;font-size:14px;font-weight:bold;text-shadow:1px 1px 2px #000;}
+#dash-meter{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);width:200px;height:20px;background:rgba(0,0,0,0.7);border:2px solid #00ffff;border-radius:5px;}
+#dash-bar{height:100%;background:linear-gradient(90deg,#00ffff,#0088ff);border-radius:3px;transition:width 0.1s;}
+#dash-text{position:fixed;bottom:35px;left:50%;transform:translateX(-50%);color:#00ffff;font-size:14px;font-weight:bold;text-shadow:1px 1px 2px #000;}
 </style>
 </head>
 <body>
@@ -32,9 +32,9 @@ html,body{margin:0;padding:0;overflow:hidden;background:#001b2e;font-family:'Ari
 <div id="combo"></div>
 <canvas id="minimap"></canvas>
 <div id="controls">
-  <b>WASD:</b> 移動 | <b>マウス:</b> 照準 | <b>クリック:</b> 射撃<br>
-  <b>スペース:</b> ダッシュ | <b>Shift:</b> 必殺技（ゲージMAX時）<br>
-  敵を倒してコンボ＆スコアを稼げ！
+  <b>WASD:</b> 移動 | <b>スペース:</b> ダッシュ攻撃<br>
+  <b>Shift:</b> 必殺技（全周囲攻撃）<br>
+  敵に体当たりしてダッシュで倒せ！
 </div>
 <div id="achievements">
   <div style="font-weight:bold;margin-bottom:5px;">🏆 実績</div>
@@ -44,9 +44,9 @@ html,body{margin:0;padding:0;overflow:hidden;background:#001b2e;font-family:'Ari
 <div id="boss-health">
   <div id="boss-health-bar"></div>
 </div>
-<div id="special-text">必殺技ゲージ</div>
-<div id="special-meter">
-  <div id="special-bar"></div>
+<div id="dash-text">ダッシュゲージ</div>
+<div id="dash-meter">
+  <div id="dash-bar"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
@@ -59,19 +59,6 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 function playSound(type) {
   const sounds = {
-    shoot: () => {
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(400, audioCtx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.05);
-      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.05);
-    },
     coin: () => {
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
@@ -116,11 +103,11 @@ function playSound(type) {
       osc.connect(gain);
       gain.connect(audioCtx.destination);
       osc.type = 'square';
-      osc.frequency.value = 400;
-      gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+      osc.frequency.value = 500;
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
       osc.start();
-      osc.stop(audioCtx.currentTime + 0.1);
+      osc.stop(audioCtx.currentTime + 0.15);
     },
     enemyKill: (combo) => {
       const freq = 300 + combo * 50;
@@ -184,7 +171,7 @@ function playSound(type) {
 // シーン
 // =====================
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x0b3c5d, 0.02);
+scene.fog = new THREE.FogExp2(0x0b3c5d, 0.015);
 
 const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
 camera.position.set(0, 12, 18);
@@ -215,56 +202,41 @@ const wallMaterial = new THREE.MeshStandardMaterial({
   roughness: 0.8
 });
 
-const walls = [];
-const wallThickness = 2;
-
 const northWall = new THREE.Mesh(
-  new THREE.BoxGeometry(ARENA_SIZE * 2 + wallThickness * 2, wallHeight, wallThickness),
+  new THREE.BoxGeometry(ARENA_SIZE * 2 + 4, wallHeight, 2),
   wallMaterial
 );
 northWall.position.set(0, wallHeight/2, -ARENA_SIZE);
 scene.add(northWall);
-walls.push({mesh: northWall, normal: new THREE.Vector3(0, 0, 1)});
 
 const southWall = new THREE.Mesh(
-  new THREE.BoxGeometry(ARENA_SIZE * 2 + wallThickness * 2, wallHeight, wallThickness),
+  new THREE.BoxGeometry(ARENA_SIZE * 2 + 4, wallHeight, 2),
   wallMaterial
 );
 southWall.position.set(0, wallHeight/2, ARENA_SIZE);
 scene.add(southWall);
-walls.push({mesh: southWall, normal: new THREE.Vector3(0, 0, -1)});
 
 const westWall = new THREE.Mesh(
-  new THREE.BoxGeometry(wallThickness, wallHeight, ARENA_SIZE * 2),
+  new THREE.BoxGeometry(2, wallHeight, ARENA_SIZE * 2),
   wallMaterial
 );
 westWall.position.set(-ARENA_SIZE, wallHeight/2, 0);
 scene.add(westWall);
-walls.push({mesh: westWall, normal: new THREE.Vector3(1, 0, 0)});
 
 const eastWall = new THREE.Mesh(
-  new THREE.BoxGeometry(wallThickness, wallHeight, ARENA_SIZE * 2),
+  new THREE.BoxGeometry(2, wallHeight, ARENA_SIZE * 2),
   wallMaterial
 );
 eastWall.position.set(ARENA_SIZE, wallHeight/2, 0);
 scene.add(eastWall);
-walls.push({mesh: eastWall, normal: new THREE.Vector3(-1, 0, 0)});
-
-walls.forEach(wall => {
-  const light = new THREE.PointLight(0x00ddff, 0.5, 20);
-  light.position.copy(wall.mesh.position);
-  scene.add(light);
-});
 
 // =====================
 // スカイドーム
 // =====================
-const domeGeo = new THREE.SphereGeometry(150, 32, 32);
-const domeMat = new THREE.MeshBasicMaterial({
-  color: 0x0b3c5d,
-  side: THREE.BackSide
-});
-const dome = new THREE.Mesh(domeGeo, domeMat);
+const dome = new THREE.Mesh(
+  new THREE.SphereGeometry(150, 32, 32),
+  new THREE.MeshBasicMaterial({color: 0x0b3c5d, side: THREE.BackSide})
+);
 scene.add(dome);
 
 // =====================
@@ -272,10 +244,7 @@ scene.add(dome);
 // =====================
 const floor = new THREE.Mesh(
   new THREE.PlaneGeometry(ARENA_SIZE * 2.5, ARENA_SIZE * 2.5, 20, 20),
-  new THREE.MeshStandardMaterial({
-    color: 0x1f6f8b,
-    roughness: 1
-  })
+  new THREE.MeshStandardMaterial({color: 0x1f6f8b, roughness: 1})
 );
 floor.rotation.x = -Math.PI/2;
 floor.receiveShadow = true;
@@ -296,75 +265,51 @@ scene.add(borderLine);
 // 障害物（岩）
 // =====================
 const obstacles = [];
-function addObstacle(mesh, radius) {
-  mesh.userData.radius = radius;
-  mesh.castShadow = true;
-  obstacles.push(mesh);
-  scene.add(mesh);
-}
-
 for(let i = 0; i < 25; i++) {
   const r = Math.random() * 1.5 + 1.0;
   const rock = new THREE.Mesh(
     new THREE.DodecahedronGeometry(r, 1),
-    new THREE.MeshStandardMaterial({
-      color: 0x445566,
-      roughness: 0.9,
-      metalness: 0.1
-    })
+    new THREE.MeshStandardMaterial({color: 0x445566, roughness: 0.9, metalness: 0.1})
   );
   const angle = Math.random() * Math.PI * 2;
   const dist = Math.random() * (ARENA_SIZE - 10) + 5;
-  rock.position.set(
-    Math.cos(angle) * dist,
-    r,
-    Math.sin(angle) * dist
-  );
-  addObstacle(rock, r);
+  rock.position.set(Math.cos(angle) * dist, r, Math.sin(angle) * dist);
+  rock.userData = {radius: r};
+  rock.castShadow = true;
+  obstacles.push(rock);
+  scene.add(rock);
 }
 
 // =====================
-// 海藻（高く・密度低く）
+// 海藻（超高く）
 // =====================
 const kelps = [];
 for(let i = 0; i < 30; i++) {
-  const h = Math.random() * 12 + 10; // 10-22mの高さ
+  const h = Math.random() * 15 + 15; // 15-30mの高さ！
   const kelp = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.15, 0.3, h, 8, 1, true),
+    new THREE.CylinderGeometry(0.15, 0.3, h, 8, 4, true),
     new THREE.MeshStandardMaterial({color: 0x2e8b57})
   );
   const angle = Math.random() * Math.PI * 2;
   const dist = Math.random() * (ARENA_SIZE - 5);
-  kelp.position.set(
-    Math.cos(angle) * dist,
-    h/2,
-    Math.sin(angle) * dist
-  );
-  kelp.userData = {t: Math.random() * 10, height: h};
+  kelp.position.set(Math.cos(angle) * dist, h/2, Math.sin(angle) * dist);
+  kelp.userData = {t: Math.random() * 10};
   scene.add(kelp);
   kelps.push(kelp);
 }
 
 // =====================
-// パーティクル（泡）
+// 泡
 // =====================
 const bubbles = [];
 for(let i = 0; i < 80; i++) {
   const bubble = new THREE.Mesh(
     new THREE.SphereGeometry(0.1 + Math.random() * 0.25, 8, 8),
-    new THREE.MeshBasicMaterial({
-      color: 0xaaddff,
-      transparent: true,
-      opacity: 0.5
-    })
+    new THREE.MeshBasicMaterial({color: 0xaaddff, transparent: true, opacity: 0.5})
   );
   const angle = Math.random() * Math.PI * 2;
   const dist = Math.random() * ARENA_SIZE;
-  bubble.position.set(
-    Math.cos(angle) * dist,
-    Math.random() * 25,
-    Math.sin(angle) * dist
-  );
+  bubble.position.set(Math.cos(angle) * dist, Math.random() * 25, Math.sin(angle) * dist);
   bubble.userData = {speed: 0.5 + Math.random() * 0.8};
   scene.add(bubble);
   bubbles.push(bubble);
@@ -375,12 +320,7 @@ for(let i = 0; i < 80; i++) {
 // =====================
 const player = new THREE.Mesh(
   new THREE.SphereGeometry(0.7, 24, 24),
-  new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0x4444ff,
-    emissiveIntensity: 0.3,
-    metalness: 0.5
-  })
+  new THREE.MeshStandardMaterial({color: 0xffffff, emissive: 0x4444ff, emissiveIntensity: 0.3, metalness: 0.5})
 );
 player.position.y = 0.7;
 player.castShadow = true;
@@ -389,119 +329,27 @@ scene.add(player);
 const playerLight = new THREE.PointLight(0x88ccff, 1.5, 15);
 player.add(playerLight);
 
-// 照準レティクル
-const reticle = new THREE.Mesh(
-  new THREE.RingGeometry(0.3, 0.4, 16),
-  new THREE.MeshBasicMaterial({
-    color: 0x00ff00,
-    transparent: true,
-    opacity: 0.7
-  })
+// ダッシュエフェクトリング
+const dashRing = new THREE.Mesh(
+  new THREE.RingGeometry(1.5, 2, 32),
+  new THREE.MeshBasicMaterial({color: 0x00ffff, transparent: true, opacity: 0, side: THREE.DoubleSide})
 );
-reticle.rotation.x = -Math.PI/2;
-reticle.position.y = 0.1;
-scene.add(reticle);
-
-// =====================
-// 弾丸システム
-// =====================
-let bullets = [];
-let shootCooldown = 0;
-const SHOOT_COOLDOWN = 0.15;
-
-function shootBullet(targetX, targetZ) {
-  if(shootCooldown > 0) return;
-  
-  const bullet = new THREE.Mesh(
-    new THREE.SphereGeometry(0.2, 8, 8),
-    new THREE.MeshBasicMaterial({
-      color: 0x00ffff,
-      emissive: 0x00ffff,
-      emissiveIntensity: 1
-    })
-  );
-  
-  bullet.position.copy(player.position);
-  const dx = targetX - player.position.x;
-  const dz = targetZ - player.position.z;
-  const dist = Math.hypot(dx, dz);
-  
-  bullet.userData = {
-    vx: dx / dist * 40,
-    vz: dz / dist * 40,
-    life: 2
-  };
-  
-  scene.add(bullet);
-  bullets.push(bullet);
-  shootCooldown = SHOOT_COOLDOWN;
-  playSound('shoot');
-}
-
-// =====================
-// 必殺技
-// =====================
-let specialMeter = 0;
-let specialActive = false;
-
-function activateSpecial() {
-  if(specialMeter < 100 || specialActive) return;
-  
-  specialMeter = 0;
-  specialActive = true;
-  playSound('special');
-  
-  // 全方向弾丸
-  for(let i = 0; i < 24; i++) {
-    const angle = (i / 24) * Math.PI * 2;
-    const bullet = new THREE.Mesh(
-      new THREE.SphereGeometry(0.3, 8, 8),
-      new THREE.MeshBasicMaterial({
-        color: 0xffff00,
-        emissive: 0xffff00,
-        emissiveIntensity: 1
-      })
-    );
-    
-    bullet.position.copy(player.position);
-    bullet.userData = {
-      vx: Math.cos(angle) * 35,
-      vz: Math.sin(angle) * 35,
-      life: 3,
-      damage: 3
-    };
-    
-    scene.add(bullet);
-    bullets.push(bullet);
-  }
-  
-  setTimeout(() => { specialActive = false; }, 100);
-}
+dashRing.rotation.x = -Math.PI/2;
+dashRing.position.y = 0.1;
+scene.add(dashRing);
 
 // =====================
 // コイン
 // =====================
 let coins = [];
-function spawnCoin() {
+function spawnCoin(x, z) {
   const coin = new THREE.Mesh(
     new THREE.CylinderGeometry(0.5, 0.5, 0.15, 20),
-    new THREE.MeshStandardMaterial({
-      color: 0xffdd00,
-      emissive: 0xffaa00,
-      emissiveIntensity: 0.6,
-      metalness: 0.9
-    })
+    new THREE.MeshStandardMaterial({color: 0xffdd00, emissive: 0xffaa00, emissiveIntensity: 0.6, metalness: 0.9})
   );
-  const angle = Math.random() * Math.PI * 2;
-  const dist = Math.random() * (ARENA_SIZE - 5);
-  coin.position.set(
-    Math.cos(angle) * dist,
-    0.5,
-    Math.sin(angle) * dist
-  );
+  coin.position.set(x || (Math.random()-0.5)*100, 0.5, z || (Math.random()-0.5)*100);
   coin.rotation.x = Math.PI/2;
   coin.userData = {t: Math.random() * 10};
-  coin.castShadow = true;
   scene.add(coin);
   coins.push(coin);
 }
@@ -513,7 +361,7 @@ let powerups = [];
 const powerupTypes = {
   invincible: {color: 0x00ddff, emissive: 0x00aaff},
   speed: {color: 0x00ff88, emissive: 0x00dd66},
-  rapidfire: {color: 0xff00ff, emissive: 0xdd00dd}
+  damage: {color: 0xff00ff, emissive: 0xdd00dd}
 };
 
 function spawnPowerup() {
@@ -521,32 +369,19 @@ function spawnPowerup() {
   const type = types[Math.floor(Math.random() * types.length)];
   const config = powerupTypes[type];
   
-  // パワーアップは星型（敵と区別）
   const starGroup = new THREE.Group();
-  
-  // 中央の球
   const core = new THREE.Mesh(
     new THREE.SphereGeometry(0.4, 16, 16),
-    new THREE.MeshStandardMaterial({
-      color: config.color,
-      emissive: config.emissive,
-      emissiveIntensity: 0.9,
-      metalness: 0.8
-    })
+    new THREE.MeshStandardMaterial({color: config.color, emissive: config.emissive, emissiveIntensity: 0.9, metalness: 0.8})
   );
   starGroup.add(core);
   
-  // 8方向の光線
-  const rayGeometry = new THREE.ConeGeometry(0.1, 0.6, 4);
+  const rayGeo = new THREE.ConeGeometry(0.1, 0.6, 4);
   for(let i = 0; i < 8; i++) {
     const angle = (i / 8) * Math.PI * 2;
     const ray = new THREE.Mesh(
-      rayGeometry,
-      new THREE.MeshStandardMaterial({
-        color: config.color,
-        emissive: config.emissive,
-        emissiveIntensity: 1.0
-      })
+      rayGeo,
+      new THREE.MeshStandardMaterial({color: config.color, emissive: config.emissive, emissiveIntensity: 1.0})
     );
     ray.position.x = Math.cos(angle) * 0.5;
     ray.position.z = Math.sin(angle) * 0.5;
@@ -557,18 +392,14 @@ function spawnPowerup() {
   
   const angle = Math.random() * Math.PI * 2;
   const dist = Math.random() * (ARENA_SIZE - 10) + 5;
-  starGroup.position.set(
-    Math.cos(angle) * dist,
-    0.5,
-    Math.sin(angle) * dist
-  );
+  starGroup.position.set(Math.cos(angle) * dist, 0.5, Math.sin(angle) * dist);
   starGroup.userData = {t: Math.random() * 10, type: type};
   scene.add(starGroup);
   powerups.push(starGroup);
 }
 
 // =====================
-// 敵システム
+// 敵
 // =====================
 let enemies = [];
 let waveNumber = 1;
@@ -583,113 +414,55 @@ const enemyTypes = {
   sniper: {color: 0xff44aa, speed: 1.8, health: 3, size: 0.8, points: 25}
 };
 
-function spawnEnemy(type = null) {
-  // 敵の最大数を制限してフリーズ防止
-  if(enemies.length >= 40) return;
-  
-  if(!type) {
-    const types = Object.keys(enemyTypes);
-    type = types[Math.floor(Math.random() * types.length)];
-  }
+function spawnEnemy(type) {
+  if(enemies.length >= 30) return;
+  if(!type) type = Object.keys(enemyTypes)[Math.floor(Math.random() * 4)];
   
   const config = enemyTypes[type];
-  
-  // 敵はトゲトゲの形状（パワーアップと区別）
   const enemyGroup = new THREE.Group();
   
-  // メインボディ
   const body = new THREE.Mesh(
     new THREE.BoxGeometry(config.size, config.size, config.size),
-    new THREE.MeshStandardMaterial({
-      color: config.color,
-      emissive: config.color,
-      emissiveIntensity: 0.4
-    })
+    new THREE.MeshStandardMaterial({color: config.color, emissive: config.color, emissiveIntensity: 0.4})
   );
   enemyGroup.add(body);
   
-  // トゲ（6方向）
-  const spikeSize = config.size * 0.4;
-  const spikeGeometry = new THREE.ConeGeometry(spikeSize * 0.3, spikeSize, 4);
-  const directions = [
-    {x: config.size * 0.5, y: 0, z: 0, rx: 0, ry: 0, rz: -Math.PI/2},
-    {x: -config.size * 0.5, y: 0, z: 0, rx: 0, ry: 0, rz: Math.PI/2},
-    {x: 0, y: config.size * 0.5, z: 0, rx: 0, ry: 0, rz: 0},
-    {x: 0, y: -config.size * 0.5, z: 0, rx: 0, ry: 0, rz: Math.PI},
-    {x: 0, y: 0, z: config.size * 0.5, rx: Math.PI/2, ry: 0, rz: 0},
-    {x: 0, y: 0, z: -config.size * 0.5, rx: -Math.PI/2, ry: 0, rz: 0}
-  ];
-  
-  directions.forEach(dir => {
-    const spike = new THREE.Mesh(
-      spikeGeometry,
-      new THREE.MeshStandardMaterial({
-        color: config.color,
-        emissive: config.color,
-        emissiveIntensity: 0.6
-      })
-    );
-    spike.position.set(dir.x, dir.y, dir.z);
-    spike.rotation.set(dir.rx, dir.ry, dir.rz);
+  const spikeGeo = new THREE.ConeGeometry(config.size * 0.12, config.size * 0.4, 4);
+  [[config.size * 0.5, 0, 0, 0, 0, -Math.PI/2], [-config.size * 0.5, 0, 0, 0, 0, Math.PI/2],
+   [0, config.size * 0.5, 0, 0, 0, 0], [0, -config.size * 0.5, 0, 0, 0, Math.PI],
+   [0, 0, config.size * 0.5, Math.PI/2, 0, 0], [0, 0, -config.size * 0.5, -Math.PI/2, 0, 0]].forEach(dir => {
+    const spike = new THREE.Mesh(spikeGeo, new THREE.MeshStandardMaterial({color: config.color, emissive: config.color, emissiveIntensity: 0.6}));
+    spike.position.set(dir[0], dir[1], dir[2]);
+    spike.rotation.set(dir[3], dir[4], dir[5]);
     enemyGroup.add(spike);
   });
   
   const angle = Math.random() * Math.PI * 2;
   const dist = ARENA_SIZE - 5;
-  enemyGroup.position.set(
-    Math.cos(angle) * dist,
-    config.size/2,
-    Math.sin(angle) * dist
-  );
-  
+  enemyGroup.position.set(Math.cos(angle) * dist, config.size/2, Math.sin(angle) * dist);
   enemyGroup.userData = {
-    type: type,
-    behavior: Math.floor(Math.random() * 4),
-    speed: config.speed * (1 + waveNumber * 0.1),
-    health: config.health,
-    maxHealth: config.health,
-    points: config.points,
-    t: Math.random() * 5,
-    angle: Math.random() * Math.PI * 2,
-    targetAngle: 0,
-    body: body // ダメージエフェクト用
+    type: type, behavior: Math.floor(Math.random() * 4), speed: config.speed * (1 + waveNumber * 0.1),
+    health: config.health, maxHealth: config.health, points: config.points,
+    t: Math.random() * 5, angle: Math.random() * Math.PI * 2, body: body
   };
-  
-  enemyGroup.castShadow = true;
   scene.add(enemyGroup);
   enemies.push(enemyGroup);
   enemiesInWave++;
 }
 
-// ボス
 function spawnBoss() {
   playSound('bossSpawn');
-  
   const bossEnemy = new THREE.Mesh(
     new THREE.DodecahedronGeometry(2.5, 0),
-    new THREE.MeshStandardMaterial({
-      color: 0xff0000,
-      emissive: 0xff0000,
-      emissiveIntensity: 0.7,
-      metalness: 0.6
-    })
+    new THREE.MeshStandardMaterial({color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.7, metalness: 0.6})
   );
-  
   bossEnemy.position.set(0, 2.5, -ARENA_SIZE + 10);
   bossEnemy.userData = {
-    isBoss: true,
-    health: 30 + waveNumber * 15,
-    maxHealth: 30 + waveNumber * 15,
-    speed: 2.0,
-    phase: 0,
-    t: 0,
-    attackCooldown: 0
+    isBoss: true, health: 30 + waveNumber * 15, maxHealth: 30 + waveNumber * 15,
+    speed: 2.0, phase: 0, t: 0, attackCooldown: 0
   };
-  
-  bossEnemy.castShadow = true;
   scene.add(bossEnemy);
   boss = bossEnemy;
-  
   document.getElementById('boss-name').textContent = `BOSS WAVE ${waveNumber}`;
   document.getElementById('boss-name').style.display = 'block';
   document.getElementById('boss-health').style.display = 'block';
@@ -697,27 +470,16 @@ function spawnBoss() {
 }
 
 function updateBossHealth() {
-  if(boss) {
-    const percent = (boss.userData.health / boss.userData.maxHealth) * 100;
-    document.getElementById('boss-health-bar').style.width = percent + '%';
-  }
+  if(boss) document.getElementById('boss-health-bar').style.width = ((boss.userData.health / boss.userData.maxHealth) * 100) + '%';
 }
 
-// Wave管理
 function startWave() {
   waveNumber++;
   enemiesInWave = 0;
   enemiesKilledInWave = 0;
-  
-  const enemyCount = 5 + waveNumber * 2;
-  
-  for(let i = 0; i < enemyCount; i++) {
-    setTimeout(() => spawnEnemy(), i * 1000);
-  }
-  
-  if(waveNumber % 3 === 0) {
-    setTimeout(() => spawnBoss(), enemyCount * 1000 + 2000);
-  }
+  const count = 5 + waveNumber * 2;
+  for(let i = 0; i < count; i++) setTimeout(() => spawnEnemy(), i * 1000);
+  if(waveNumber % 3 === 0) setTimeout(() => spawnBoss(), count * 1000 + 2000);
 }
 
 startWave();
@@ -726,46 +488,12 @@ startWave();
 // 入力
 // =====================
 const key = {};
-let mouseX = 0, mouseZ = 0;
-let mouseDown = false;
-
 addEventListener("keydown", e => {
   key[e.key.toLowerCase()] = true;
-  if(e.code === 'Space' && !dashCooldown) {
-    dashActive = true;
-    dashCooldown = 1.0;
-    playSound('dash');
-  }
-  if(e.key.toLowerCase() === 'shift') {
-    activateSpecial();
-  }
+  if(e.code === 'Space' && dashMeter >= 100) activateDash();
+  if(e.key.toLowerCase() === 'shift' && dashMeter >= 100) activateSpecial();
 });
 addEventListener("keyup", e => key[e.key.toLowerCase()] = false);
-
-addEventListener("mousemove", e => {
-  const rect = renderer.domElement.getBoundingClientRect();
-  const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-  const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-  
-  const vector = new THREE.Vector3(x, y, 0.5);
-  vector.unproject(camera);
-  const dir = vector.sub(camera.position).normalize();
-  const distance = -camera.position.y / dir.y;
-  const pos = camera.position.clone().add(dir.multiplyScalar(distance));
-  
-  mouseX = pos.x;
-  mouseZ = pos.z;
-  reticle.position.x = mouseX;
-  reticle.position.z = mouseZ;
-});
-
-addEventListener("mousedown", () => {
-  mouseDown = true;
-});
-
-addEventListener("mouseup", () => {
-  mouseDown = false;
-});
 
 let touchX = 0, touchY = 0;
 addEventListener("touchmove", e => {
@@ -774,81 +502,73 @@ addEventListener("touchmove", e => {
   touchY = (t.clientY/innerHeight - 0.5) * 2;
 }, {passive: false});
 
-addEventListener("touchstart", e => {
-  const t = e.touches[0];
-  const rect = renderer.domElement.getBoundingClientRect();
-  const x = ((t.clientX - rect.left) / rect.width) * 2 - 1;
-  const y = -((t.clientY - rect.top) / rect.height) * 2 + 1;
-  
-  const vector = new THREE.Vector3(x, y, 0.5);
-  vector.unproject(camera);
-  const dir = vector.sub(camera.position).normalize();
-  const distance = -camera.position.y / dir.y;
-  const pos = camera.position.clone().add(dir.multiplyScalar(distance));
-  
-  shootBullet(pos.x, pos.z);
+addEventListener("touchstart", () => {
+  if(dashMeter >= 100) activateDash();
 });
 
 // =====================
 // ゲーム状態
 // =====================
-let score = 0;
-let highscore = parseInt(localStorage.getItem('underwaterHighscore3') || '0');
-let invincible = 3;
-let speedBoost = 0;
-let rapidFire = 0;
-let scoreMultiplier = 1;
-let combo = 0;
-let comboTimer = 0;
-let dashActive = false;
-let dashCooldown = 0;
+let score = 0, highscore = parseInt(localStorage.getItem('paraG2HS') || '0');
+let invincible = 3, speedBoost = 0, damageBoost = 0, scoreMultiplier = 1;
+let combo = 0, comboTimer = 0, dashActive = false, dashMeter = 100, specialActive = false;
+let totalKills = 0;
 
-// 実績システム
+function activateDash() {
+  if(dashMeter < 100 || dashActive) return;
+  dashMeter = 0;
+  dashActive = true;
+  playSound('dash');
+  dashRing.position.copy(player.position);
+  dashRing.position.y = 0.1;
+  dashRing.material.opacity = 0.8;
+  dashRing.scale.set(1, 1, 1);
+  setTimeout(() => { dashActive = false; }, 200);
+}
+
+function activateSpecial() {
+  if(dashMeter < 100 || specialActive) return;
+  dashMeter = 0;
+  specialActive = true;
+  playSound('special');
+  dashRing.position.copy(player.position);
+  dashRing.position.y = 0.1;
+  dashRing.material.opacity = 1.0;
+  dashRing.scale.set(1, 1, 1);
+  setTimeout(() => { specialActive = false; }, 500);
+}
+
 const achievements = {
   firstKill: {name: "初撃破", unlocked: false, check: () => enemiesKilledInWave >= 1},
   combo10: {name: "10コンボ", unlocked: false, check: () => combo >= 10},
-  combo50: {name: "50コンボ", unlocked: false, check: () => combo >= 50},
   wave5: {name: "Wave 5到達", unlocked: false, check: () => waveNumber >= 5},
-  wave10: {name: "Wave 10到達", unlocked: false, check: () => waveNumber >= 10},
   score1000: {name: "1000点", unlocked: false, check: () => score >= 1000},
-  score5000: {name: "5000点", unlocked: false, check: () => score >= 5000},
-  bossKiller: {name: "ボス撃破", unlocked: false},
-  sharpshooter: {name: "100体撃破", unlocked: false, check: () => totalKills >= 100}
+  bossKiller: {name: "ボス撃破", unlocked: false}
 };
 
-let totalKills = 0;
-
 function checkAchievements() {
-  let newUnlock = false;
   Object.keys(achievements).forEach(key => {
     const ach = achievements[key];
     if(!ach.unlocked && ach.check && ach.check()) {
       ach.unlocked = true;
-      newUnlock = true;
       showAchievement(ach.name);
+      updateAchievementDisplay();
     }
   });
-  
-  if(newUnlock) updateAchievementDisplay();
 }
 
 function showAchievement(name) {
   const msg = document.getElementById('msg');
-  const oldText = msg.textContent;
-  msg.textContent = `🏆 実績解除: ${name}`;
+  const old = msg.textContent;
+  msg.textContent = `🏆 ${name}`;
   msg.style.color = '#ffdd00';
   playSound('powerup');
-  setTimeout(() => {
-    msg.textContent = oldText;
-    msg.style.color = '#ffd';
-  }, 3000);
+  setTimeout(() => { msg.textContent = old; msg.style.color = '#ffd'; }, 3000);
 }
 
 function updateAchievementDisplay() {
-  const list = document.getElementById('achievement-list');
   const unlocked = Object.values(achievements).filter(a => a.unlocked).length;
-  const total = Object.keys(achievements).length;
-  list.innerHTML = `${unlocked}/${total} 解除済み`;
+  document.getElementById('achievement-list').innerHTML = `${unlocked}/${Object.keys(achievements).length} 解除済み`;
 }
 
 updateAchievementDisplay();
@@ -863,9 +583,7 @@ const comboDisplay = document.getElementById("combo");
 highscoreEl.textContent = highscore;
 waveEl.textContent = waveNumber;
 
-// =====================
 // ミニマップ
-// =====================
 const minimapCanvas = document.getElementById("minimap");
 const minimapCtx = minimapCanvas.getContext("2d");
 minimapCanvas.width = 180;
@@ -875,38 +593,31 @@ function drawMinimap() {
   minimapCtx.clearRect(0, 0, 180, 180);
   minimapCtx.fillStyle = 'rgba(11, 60, 93, 0.8)';
   minimapCtx.fillRect(0, 0, 180, 180);
-  
   minimapCtx.strokeStyle = '#00ddff';
   minimapCtx.lineWidth = 2;
   minimapCtx.strokeRect(10, 10, 160, 160);
   
   const scale = 160 / (ARENA_SIZE * 2);
-  const centerX = 90;
-  const centerY = 90;
+  const centerX = 90, centerY = 90;
+  const toMap = (x, z) => ({x: centerX + x * scale, y: centerY + z * scale});
   
-  function toMapCoords(x, z) {
-    return {
-      x: centerX + x * scale,
-      y: centerY + z * scale
-    };
-  }
-  
-  const pPos = toMapCoords(player.position.x, player.position.z);
-  minimapCtx.fillStyle = invincible > 0 ? '#00ffff' : '#ffffff';
+  const pPos = toMap(player.position.x, player.position.z);
+  minimapCtx.fillStyle = dashActive || specialActive ? '#00ffff' : '#ffffff';
   minimapCtx.beginPath();
-  minimapCtx.arc(pPos.x, pPos.y, 5, 0, Math.PI*2);
+  minimapCtx.arc(pPos.x, pPos.y, dashActive || specialActive ? 8 : 5, 0, Math.PI*2);
   minimapCtx.fill();
   
   minimapCtx.fillStyle = '#ff4444';
   enemies.forEach(e => {
-    const ePos = toMapCoords(e.position.x, e.position.z);
+    if(e.userData.dead) return; // 死んだ敵は表示しない
+    const ePos = toMap(e.position.x, e.position.z);
     minimapCtx.beginPath();
     minimapCtx.arc(ePos.x, ePos.y, 3, 0, Math.PI*2);
     minimapCtx.fill();
   });
   
   if(boss) {
-    const bPos = toMapCoords(boss.position.x, boss.position.z);
+    const bPos = toMap(boss.position.x, boss.position.z);
     minimapCtx.fillStyle = '#ff0000';
     minimapCtx.beginPath();
     minimapCtx.arc(bPos.x, bPos.y, 7, 0, Math.PI*2);
@@ -915,27 +626,9 @@ function drawMinimap() {
     minimapCtx.lineWidth = 2;
     minimapCtx.stroke();
   }
-  
-  minimapCtx.fillStyle = '#00ddff';
-  powerups.forEach(p => {
-    const pPos = toMapCoords(p.position.x, p.position.z);
-    minimapCtx.beginPath();
-    minimapCtx.arc(pPos.x, pPos.y, 3, 0, Math.PI*2);
-    minimapCtx.fill();
-  });
-  
-  minimapCtx.fillStyle = '#ffdd00';
-  coins.forEach(c => {
-    const cPos = toMapCoords(c.position.x, c.position.z);
-    minimapCtx.beginPath();
-    minimapCtx.arc(cPos.x, cPos.y, 2, 0, Math.PI*2);
-    minimapCtx.fill();
-  });
 }
 
-// =====================
 // ループ
-// =====================
 let last = performance.now();
 function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
@@ -947,25 +640,12 @@ function loop(now) {
 }
 requestAnimationFrame(loop);
 
-// =====================
 // 更新
-// =====================
 function update(dt) {
   let baseSpeed = 10;
   if(speedBoost > 0) baseSpeed *= 1.8;
-  if(dashActive) baseSpeed *= 4.0; // ダッシュをもっと速く
+  if(dashActive) baseSpeed *= 5.0;
   
-  if(dashActive) {
-    dashActive = false;
-  }
-  if(dashCooldown > 0) {
-    dashCooldown -= dt;
-  }
-  if(shootCooldown > 0) {
-    shootCooldown -= dt;
-  }
-  
-  // 移動
   let vx = 0, vz = 0;
   if(key.w) vz -= 1;
   if(key.s) vz += 1;
@@ -973,215 +653,39 @@ function update(dt) {
   if(key.d) vx += 1;
   
   const len = Math.hypot(vx, vz);
-  if(len > 0) {
-    vx /= len;
-    vz /= len;
-  }
+  if(len > 0) { vx /= len; vz /= len; }
   
   player.position.x += (vx + touchX) * baseSpeed * dt;
   player.position.z += (vz + touchY) * baseSpeed * dt;
   
-  const margin = 1;
-  player.position.x = Math.max(-ARENA_SIZE + margin, Math.min(ARENA_SIZE - margin, player.position.x));
-  player.position.z = Math.max(-ARENA_SIZE + margin, Math.min(ARENA_SIZE - margin, player.position.z));
+  player.position.x = Math.max(-ARENA_SIZE + 1, Math.min(ARENA_SIZE - 1, player.position.x));
+  player.position.z = Math.max(-ARENA_SIZE + 1, Math.min(ARENA_SIZE - 1, player.position.z));
   
-  // 岩当たり判定
   obstacles.forEach(o => {
     const dx = player.position.x - o.position.x;
     const dz = player.position.z - o.position.z;
     const dist = Math.hypot(dx, dz);
     const min = o.userData.radius + 0.7;
     if(dist < min) {
-      const nx = dx / (dist + 0.001);
-      const nz = dz / (dist + 0.001);
-      player.position.x = o.position.x + nx * min;
-      player.position.z = o.position.z + nz * min;
+      player.position.x = o.position.x + (dx / (dist + 0.001)) * min;
+      player.position.z = o.position.z + (dz / (dist + 0.001)) * min;
     }
   });
   
-  if(len > 0) {
-    player.rotation.y += dt * 5;
+  if(len > 0) player.rotation.y += dt * 5;
+  
+  if(dashActive || specialActive) {
+    dashRing.scale.x += dt * (specialActive ? 15 : 10);
+    dashRing.scale.y += dt * (specialActive ? 15 : 10);
+    dashRing.material.opacity -= dt * (specialActive ? 2 : 4);
   }
   
-  // 自動射撃（マウス押下時 or ラピッドファイア時）
-  if(mouseDown || (rapidFire > 0 && enemies.length > 0)) {
-    if(rapidFire > 0 && enemies.length > 0) {
-      // 最も近い敵を狙う
-      let nearest = enemies[0];
-      let minDist = Infinity;
-      enemies.forEach(e => {
-        const d = Math.hypot(player.position.x - e.position.x, player.position.z - e.position.z);
-        if(d < minDist) {
-          minDist = d;
-          nearest = e;
-        }
-      });
-      shootBullet(nearest.position.x, nearest.position.z);
-    } else {
-      shootBullet(mouseX, mouseZ);
-    }
-  }
-  
-  // 弾丸更新（最大数制限でメモリリーク防止）
-  if(bullets.length > 200) {
-    // 古い弾丸を削除
-    const toRemove = bullets.splice(0, 50);
-    toRemove.forEach(b => {
-      if(b && b.geometry) b.geometry.dispose();
-      if(b && b.material) b.material.dispose();
-      if(b && b.parent) scene.remove(b);
-    });
-  }
-  
-  // 削除する弾丸をマーク
-  const bulletsToRemove = [];
-  
-  for(let i = 0; i < bullets.length; i++) {
-    const b = bullets[i];
-    if(!b || !b.position) {
-      bulletsToRemove.push(i);
-      continue;
-    }
-    
-    b.position.x += b.userData.vx * dt;
-    b.position.z += b.userData.vz * dt;
-    b.userData.life -= dt;
-    
-    if(b.userData.life <= 0 || 
-       Math.abs(b.position.x) > ARENA_SIZE || 
-       Math.abs(b.position.z) > ARENA_SIZE) {
-      bulletsToRemove.push(i);
-      continue;
-    }
-    
-    // 敵との当たり判定
-    let hitEnemy = false;
-    for(let j = enemies.length - 1; j >= 0; j--) {
-      const e = enemies[j];
-      if(!e || !e.position) continue;
-      
-      const dist = Math.hypot(b.position.x - e.position.x, b.position.z - e.position.z);
-      
-      if(dist < 1) {
-        bulletsToRemove.push(i);
-        hitEnemy = true;
-        
-        const damage = b.userData.damage || 1;
-        e.userData.health -= damage;
-        if(e.userData.body) {
-          e.userData.body.material.emissiveIntensity = 1.0;
-        }
-        
-        // 必殺技ゲージは敵に当たった時のみチャージ
-        specialMeter += 3;
-        if(specialMeter > 100) specialMeter = 100;
-        
-        if(e.userData.health <= 0) {
-          // グループとその子要素を完全に削除
-          e.traverse(child => {
-            if(child.geometry) child.geometry.dispose();
-            if(child.material) {
-              if(Array.isArray(child.material)) {
-                child.material.forEach(mat => mat.dispose());
-              } else {
-                child.material.dispose();
-              }
-            }
-          });
-          scene.remove(e);
-          enemies.splice(j, 1);
-          score += e.userData.points * (combo + 1) * scoreMultiplier;
-          combo++;
-          comboTimer = 3;
-          enemiesKilledInWave++;
-          totalKills++;
-          playSound('enemyKill', combo);
-          showCombo();
-          
-          // コインドロップ
-          if(Math.random() < 0.3) {
-            const coin = new THREE.Mesh(
-              new THREE.CylinderGeometry(0.5, 0.5, 0.15, 20),
-              new THREE.MeshStandardMaterial({
-                color: 0xffdd00,
-                emissive: 0xffaa00,
-                emissiveIntensity: 0.6,
-                metalness: 0.9
-              })
-            );
-            coin.position.copy(e.position);
-            coin.rotation.x = Math.PI/2;
-            coin.userData = {t: 0};
-            scene.add(coin);
-            coins.push(coin);
-          }
-        }
-        break;
-      }
-    }
-    
-    if(hitEnemy) continue;
-    
-    // ボスとの当たり判定
-    if(boss && boss.position) {
-      const dist = Math.hypot(b.position.x - boss.position.x, b.position.z - boss.position.z);
-      if(dist < 3) {
-        bulletsToRemove.push(i);
-        
-        const damage = b.userData.damage || 1;
-        boss.userData.health -= damage;
-        boss.material.emissiveIntensity = 1.0;
-        playSound('bossHit');
-        updateBossHealth();
-        
-        // 必殺技ゲージはボスに当たった時もチャージ
-        specialMeter += 2;
-        if(specialMeter > 100) specialMeter = 100;
-        
-        if(boss.userData.health <= 0) {
-          if(boss.geometry) boss.geometry.dispose();
-          if(boss.material) boss.material.dispose();
-          scene.remove(boss);
-          boss = null;
-          score += 500 * scoreMultiplier;
-          combo += 10;
-          comboTimer = 5;
-          totalKills++;
-          playSound('powerup');
-          achievements.bossKiller.unlocked = true;
-          showAchievement("ボス撃破");
-          
-          document.getElementById('boss-name').style.display = 'none';
-          document.getElementById('boss-health').style.display = 'none';
-          
-          for(let k = 0; k < 5; k++) {
-            setTimeout(() => spawnCoin(), k * 200);
-          }
-          setTimeout(() => spawnPowerup(), 1000);
-        }
-      }
-    }
-  }
-  
-  // マークした弾丸を削除（逆順で削除）
-  for(let i = bulletsToRemove.length - 1; i >= 0; i--) {
-    const idx = bulletsToRemove[i];
-    if(bullets[idx]) {
-      const b = bullets[idx];
-      if(b.geometry) b.geometry.dispose();
-      if(b.material) b.material.dispose();
-      scene.remove(b);
-      bullets.splice(idx, 1);
-    }
-  }
-  
-  // 海藻
   kelps.forEach(k => {
     k.userData.t += dt;
-    k.rotation.z = Math.sin(k.userData.t) * 0.15;
+    k.rotation.z = Math.sin(k.userData.t * 0.8) * 0.2;
+    k.rotation.x = Math.sin(k.userData.t * 0.5 + 1) * 0.15;
   });
   
-  // 泡
   bubbles.forEach(b => {
     b.position.y += b.userData.speed * dt;
     if(b.position.y > 25) b.position.y = 0;
@@ -1189,18 +693,12 @@ function update(dt) {
     b.position.x += Math.sin(b.userData.t) * 0.8 * dt;
   });
   
-  // コイン
   for(let i = coins.length - 1; i >= 0; i--) {
     const c = coins[i];
     c.userData.t += dt;
     c.rotation.y += dt * 4;
     c.position.y = 0.5 + Math.sin(c.userData.t * 2) * 0.3;
-    
-    const dx = player.position.x - c.position.x;
-    const dz = player.position.z - c.position.z;
-    const dist = Math.hypot(dx, dz);
-    
-    if(dist < 1.5) {
+    if(Math.hypot(player.position.x - c.position.x, player.position.z - c.position.z) < 1.5) {
       scene.remove(c);
       coins.splice(i, 1);
       score += (50 + combo * 5) * scoreMultiplier;
@@ -1208,73 +706,46 @@ function update(dt) {
     }
   }
   
-  // パワーアップ
   for(let i = powerups.length - 1; i >= 0; i--) {
     const p = powerups[i];
     p.userData.t += dt;
     p.rotation.x += dt * 2;
     p.rotation.y += dt * 3;
     p.position.y = 0.5 + Math.sin(p.userData.t * 2) * 0.4;
-    
-    const dist = Math.hypot(
-      player.position.x - p.position.x,
-      player.position.z - p.position.z
-    );
-    
-    if(dist < 1.8) {
+    if(Math.hypot(player.position.x - p.position.x, player.position.z - p.position.z) < 1.8) {
       scene.remove(p);
       powerups.splice(i, 1);
       playSound('powerup');
-      
       switch(p.userData.type) {
-        case 'invincible':
-          invincible = 6;
-          scoreMultiplier = 2;
-          setTimeout(() => { scoreMultiplier = 1; }, 6000);
-          break;
-        case 'speed':
-          speedBoost = 8;
-          break;
-        case 'rapidfire':
-          rapidFire = 10;
-          break;
+        case 'invincible': invincible = 6; scoreMultiplier = 2; setTimeout(() => scoreMultiplier = 1, 6000); break;
+        case 'speed': speedBoost = 8; break;
+        case 'damage': damageBoost = 10; break;
       }
     }
   }
   
-  if(Math.random() < 0.0008 && powerups.length < 2) {
-    spawnPowerup();
-  }
+  if(Math.random() < 0.0008 && powerups.length < 2) spawnPowerup();
+  if(Math.random() < 0.002 && coins.length < 6) spawnCoin();
   
-  if(Math.random() < 0.002 && coins.length < 6) {
-    spawnCoin();
-  }
-  
-  // カメラ（境界内に制限）
   const targetCamX = player.position.x;
   const targetCamZ = player.position.z + 18;
-  
   camera.position.x += (targetCamX - camera.position.x) * 0.1;
   camera.position.z += (targetCamZ - camera.position.z) * 0.1;
-  
-  // カメラを境界内に制限（壁の内側5m）
-  const camMargin = 5;
-  camera.position.x = Math.max(-ARENA_SIZE + camMargin, Math.min(ARENA_SIZE - camMargin, camera.position.x));
-  camera.position.z = Math.max(-ARENA_SIZE + camMargin, Math.min(ARENA_SIZE - camMargin, camera.position.z));
-  
+  camera.position.x = Math.max(-ARENA_SIZE + 5, Math.min(ARENA_SIZE - 5, camera.position.x));
+  camera.position.z = Math.max(-ARENA_SIZE + 5, Math.min(ARENA_SIZE - 5, camera.position.z));
   camera.lookAt(player.position);
   
   if(comboTimer > 0) {
     comboTimer -= dt;
-    if(comboTimer <= 0) {
-      combo = 0;
-    }
+    if(comboTimer <= 0) combo = 0;
   }
   
-  // 敵AI
-  for(let i = enemies.length - 1; i >= 0; i--) {
-    const e = enemies[i];
-    if(!e || !e.userData) continue; // 安全チェック
+  const attackRange = dashActive ? 4 : (specialActive ? 8 : 0);
+  const damage = (damageBoost > 0 ? 2 : 1) * (dashActive ? 1 : (specialActive ? 2 : 0));
+  
+  // 敵の更新（削除はフラグで管理）
+  enemies.forEach(e => {
+    if(!e || !e.userData || e.userData.dead) return;
     
     const dx = player.position.x - e.position.x;
     const dz = player.position.z - e.position.z;
@@ -1284,25 +755,20 @@ function update(dt) {
     e.userData.t += dt;
     
     switch(e.userData.behavior) {
-      case 0:
-        e.position.x += dx / dist * e.userData.speed * dt;
-        e.position.z += dz / dist * e.userData.speed * dt;
-        break;
+      case 0: e.position.x += dx / dist * e.userData.speed * dt; e.position.z += dz / dist * e.userData.speed * dt; break;
       case 1:
-        e.userData.targetAngle += dt * 3;
+        e.userData.targetAngle = (e.userData.targetAngle || 0) + dt * 3;
         const offset = Math.sin(e.userData.targetAngle) * 3;
         e.position.x += (dx / dist * e.userData.speed + offset) * dt;
         e.position.z += dz / dist * e.userData.speed * dt;
         break;
       case 2:
         e.userData.angle += dt * 2;
-        const circleX = player.position.x + Math.cos(e.userData.angle) * 10;
-        const circleZ = player.position.z + Math.sin(e.userData.angle) * 10;
-        const toDx = circleX - e.position.x;
-        const toDz = circleZ - e.position.z;
-        const toDist = Math.hypot(toDx, toDz) + 0.001;
-        e.position.x += toDx / toDist * e.userData.speed * dt;
-        e.position.z += toDz / toDist * e.userData.speed * dt;
+        const cx = player.position.x + Math.cos(e.userData.angle) * 10;
+        const cz = player.position.z + Math.sin(e.userData.angle) * 10;
+        const toDist = Math.hypot(cx - e.position.x, cz - e.position.z) + 0.001;
+        e.position.x += (cx - e.position.x) / toDist * e.userData.speed * dt;
+        e.position.z += (cz - e.position.z) / toDist * e.userData.speed * dt;
         break;
       case 3:
         if(Math.sin(e.userData.t * 1.5) > 0.5) {
@@ -1315,22 +781,51 @@ function update(dt) {
     e.position.x = Math.max(-ARENA_SIZE + 2, Math.min(ARENA_SIZE - 2, e.position.x));
     e.position.z = Math.max(-ARENA_SIZE + 2, Math.min(ARENA_SIZE - 2, e.position.z));
     
-    if(e.userData.body) {
-      e.userData.body.material.emissiveIntensity = Math.max(0.4, e.userData.body.material.emissiveIntensity - dt * 2);
+    if(e.userData.body) e.userData.body.material.emissiveIntensity = Math.max(0.4, e.userData.body.material.emissiveIntensity - dt * 2);
+    
+    // ダッシュ攻撃判定
+    if(attackRange > 0 && dist < attackRange) {
+      e.userData.health -= damage * dt * 10;
+      if(e.userData.body) e.userData.body.material.emissiveIntensity = 1.0;
+      if(e.userData.health <= 0 && !e.userData.dead) {
+        e.userData.dead = true; // フラグで削除マーク
+        e.visible = false; // 即座に非表示
+        score += e.userData.points * (combo + 1) * scoreMultiplier;
+        combo++;
+        comboTimer = 3;
+        enemiesKilledInWave++;
+        totalKills++;
+        playSound('enemyKill', combo);
+        showCombo();
+        dashMeter += 15;
+        if(dashMeter > 100) dashMeter = 100;
+        if(Math.random() < 0.3) spawnCoin(e.position.x, e.position.z);
+      }
     }
     
-    if(invincible <= 0 && dist < 1.2) {
+    if(invincible <= 0 && dist < 1.2 && attackRange === 0 && !e.userData.dead) {
       gameOver();
-      return; // ゲームオーバー後は処理を中断
+      return;
     }
+  });
+  
+  // 死んだ敵を実際に削除（毎フレームではなく定期的に）
+  if(Math.random() < 0.1) {
+    const alive = [];
+    enemies.forEach(e => {
+      if(e.userData.dead) {
+        scene.remove(e);
+      } else {
+        alive.push(e);
+      }
+    });
+    enemies = alive;
   }
   
-  // ボスAI
   if(boss && boss.userData) {
     const dx = player.position.x - boss.position.x;
     const dz = player.position.z - boss.position.z;
     const dist = Math.hypot(dx, dz) + 0.001;
-    
     boss.userData.t += dt;
     boss.rotation.x += dt;
     boss.rotation.y += dt * 2;
@@ -1339,56 +834,70 @@ function update(dt) {
       boss.position.x += dx / dist * boss.userData.speed * dt;
       boss.position.z += dz / dist * boss.userData.speed * dt;
     } else {
-      boss.userData.phase = 1;
-      boss.userData.speed = 4;
       const angle = boss.userData.t * 2;
-      const radius = 20;
-      boss.position.x = player.position.x + Math.cos(angle) * radius;
-      boss.position.z = player.position.z + Math.sin(angle) * radius;
-      
+      boss.position.x = player.position.x + Math.cos(angle) * 20;
+      boss.position.z = player.position.z + Math.sin(angle) * 20;
       boss.userData.attackCooldown -= dt;
-      if(boss.userData.attackCooldown <= 0) {
-        spawnEnemy();
-        boss.userData.attackCooldown = 3;
-      }
+      if(boss.userData.attackCooldown <= 0) { spawnEnemy(); boss.userData.attackCooldown = 3; }
     }
     
     boss.material.emissiveIntensity = Math.max(0.7, boss.material.emissiveIntensity - dt * 2);
     
-    if(invincible <= 0 && dist < 3) {
+    if(attackRange > 0 && dist < attackRange + 3) {
+      boss.userData.health -= damage * dt * 8;
+      boss.material.emissiveIntensity = 1.0;
+      playSound('bossHit');
+      updateBossHealth();
+      if(boss.userData.health <= 0) {
+        scene.remove(boss);
+        boss = null;
+        score += 500 * scoreMultiplier;
+        combo += 10;
+        comboTimer = 5;
+        playSound('powerup');
+        achievements.bossKiller.unlocked = true;
+        showAchievement("ボス撃破");
+        document.getElementById('boss-name').style.display = 'none';
+        document.getElementById('boss-health').style.display = 'none';
+        for(let k = 0; k < 5; k++) setTimeout(() => spawnCoin(), k * 200);
+        setTimeout(() => spawnPowerup(), 1000);
+      }
+    }
+    
+    if(invincible <= 0 && dist < 3 && attackRange === 0) {
       gameOver();
-      return; // ゲームオーバー後は処理を中断
+      return;
     }
   }
   
-  if(enemiesKilledInWave >= enemiesInWave && enemies.length === 0 && !boss) {
-    startWave();
-  }
+  const livingEnemies = enemies.filter(e => !e.userData.dead).length;
+  if(enemiesKilledInWave >= enemiesInWave && livingEnemies === 0 && !boss) startWave();
   
   if(invincible > 0) {
     invincible -= dt;
     player.material.emissiveIntensity = 0.5 + Math.sin(Date.now() * 0.01) * 0.3;
   } else {
-    player.material.emissiveIntensity = 0.3;
+    player.material.emissiveIntensity = dashActive || specialActive ? 1.0 : 0.3;
   }
   
   if(speedBoost > 0) speedBoost -= dt;
-  if(rapidFire > 0) rapidFire -= dt;
+  if(damageBoost > 0) damageBoost -= dt;
+  if(!dashActive && !specialActive && dashMeter < 100) { dashMeter += dt * 20; if(dashMeter > 100) dashMeter = 100; }
   
   let statusMsg = "";
   if(invincible > 0) statusMsg += "無敵 ";
   if(speedBoost > 0) statusMsg += "スピード ";
-  if(rapidFire > 0) statusMsg += "連射 ";
+  if(damageBoost > 0) statusMsg += "ダメージ2倍 ";
   if(scoreMultiplier > 1) statusMsg += `${scoreMultiplier}倍 `;
+  if(dashActive) statusMsg += "ダッシュ攻撃！ ";
+  if(specialActive) statusMsg += "必殺技！ ";
   msg.textContent = statusMsg;
   
   score += dt * 15 * scoreMultiplier;
   scoreEl.textContent = Math.floor(score);
   comboCountEl.textContent = combo;
   waveEl.textContent = waveNumber;
-  
-  const specialPercent = (specialMeter / 100) * 100;
-  document.getElementById('special-bar').style.width = specialPercent + '%';
+  document.getElementById('dash-bar').style.width = dashMeter + '%';
   
   if(score > highscore) {
     highscore = Math.floor(score);
@@ -1403,99 +912,39 @@ function showCombo() {
     comboDisplay.textContent = `${combo} COMBO!`;
     comboDisplay.style.opacity = 1;
     comboDisplay.style.fontSize = Math.min(48 + combo * 2, 120) + 'px';
-    setTimeout(() => {
-      comboDisplay.style.opacity = 0;
-    }, 500);
+    setTimeout(() => comboDisplay.style.opacity = 0, 500);
   }
 }
 
 function gameOver() {
   playSound('hit');
+  if(score > highscore) localStorage.setItem('paraG2HS', Math.floor(score));
   
-  if(score > highscore) {
-    localStorage.setItem('underwaterHighscore3', Math.floor(score));
-  }
-  
-  // 全ての敵を完全に削除
   enemies.forEach(e => {
-    e.traverse(child => {
-      if(child.geometry) child.geometry.dispose();
-      if(child.material) {
-        if(Array.isArray(child.material)) {
-          child.material.forEach(mat => mat.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-    });
-    scene.remove(e);
+    if(e && e.parent) scene.remove(e);
   });
   enemies = [];
-  
-  // 弾丸削除
-  bullets.forEach(b => {
-    if(b.geometry) b.geometry.dispose();
-    if(b.material) b.material.dispose();
-    scene.remove(b);
-  });
-  bullets = [];
-  
-  // コイン削除
   coins.forEach(c => {
-    if(c.geometry) c.geometry.dispose();
-    if(c.material) c.material.dispose();
-    scene.remove(c);
+    if(c && c.parent) scene.remove(c);
   });
   coins = [];
-  
-  // パワーアップ削除
   powerups.forEach(p => {
-    p.traverse(child => {
-      if(child.geometry) child.geometry.dispose();
-      if(child.material) {
-        if(Array.isArray(child.material)) {
-          child.material.forEach(mat => mat.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-    });
-    scene.remove(p);
+    if(p && p.parent) scene.remove(p);
   });
   powerups = [];
   
-  // ボス削除
   if(boss) {
-    if(boss.geometry) boss.geometry.dispose();
-    if(boss.material) boss.material.dispose();
     scene.remove(boss);
     boss = null;
     document.getElementById('boss-name').style.display = 'none';
     document.getElementById('boss-health').style.display = 'none';
   }
   
-  // ゲーム状態リセット
-  score = 0;
-  combo = 0;
-  waveNumber = 0;
-  enemiesInWave = 0;
-  enemiesKilledInWave = 0;
-  specialMeter = 0;
-  
-  scoreEl.textContent = 0;
-  comboCountEl.textContent = 0;
-  
+  score = 0; combo = 0; waveNumber = 0; enemiesInWave = 0; enemiesKilledInWave = 0; dashMeter = 100;
+  scoreEl.textContent = 0; comboCountEl.textContent = 0;
   player.position.set(0, 0.7, 0);
-  
-  invincible = 3;
-  speedBoost = 0;
-  rapidFire = 0;
-  scoreMultiplier = 1;
-  
-  // 新しいWave開始
-  setTimeout(() => {
-    startWave();
-  }, 100);
+  invincible = 3; speedBoost = 0; damageBoost = 0; scoreMultiplier = 1;
+  setTimeout(() => startWave(), 100);
 }
 
 addEventListener("resize", () => {
